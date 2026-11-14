@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from config import DELAYS_PARQUET, DOCS_DIR, MIN_DELAY_THRESHOLD
+from config import CODE_KEY_FILE, DELAYS_PARQUET, DOCS_DIR, MIN_DELAY_THRESHOLD, RAW_DIR
 
 FIGURES_DIR = DOCS_DIR / "figures"
 
@@ -107,8 +107,27 @@ def main():
     # Decides: a documented data-quality finding for Part 4.
     # ----------------------------------------------------------------
     print("Q5  Codes missing from the official key")
-    print("      (join the codes file here once you have loaded it)")
-    print(f"      distinct codes in the data: {data['code'].nunique()}\n")
+    key_path = RAW_DIR / CODE_KEY_FILE
+    if not key_path.exists():
+        print(f"      key file not found: {key_path.name} (expected in data/raw)\n")
+    else:
+        key = pd.read_csv(key_path)
+        if "CODE" not in key.columns:
+            print(f"      {key_path.name} has no CODE column; found {list(key.columns)}\n")
+        else:
+            key_codes = set(key["CODE"].astype(str).str.strip().str.upper())
+            per_code = delayed.groupby("code")["min_delay"].agg(["size", "sum"])
+            missing = per_code[~per_code.index.isin(key_codes)]
+            missing = missing.sort_values("size", ascending=False)
+            print(f"      key lists {len(key_codes)} codes; the data uses "
+                  f"{data['code'].nunique()} ({len(per_code)} among delayed rows)")
+            print(f"      {len(missing)} codes in delayed rows are NOT in the key, covering "
+                  f"{missing['size'].sum():,} rows ({missing['size'].sum() / len(delayed):.1%}) "
+                  f"and {missing['sum'].sum() / delayed['min_delay'].sum():.1%} of delay minutes")
+            if len(missing):
+                print("      most frequent missing codes:")
+                print(missing.head(10).rename(columns={"size": "rows", "sum": "minutes"}).to_string())
+            print()
 
     # ----------------------------------------------------------------
     # Q6 - station count distribution
@@ -141,22 +160,38 @@ def main():
     print("Q7/Q8  Delay by hour of day")
     print(by_hour.round(1).to_string())
 
-    rush = by_hour.loc[by_hour.index.isin([7, 8, 9, 16, 17, 18])]
-    quiet = by_hour.loc[~by_hour.index.isin([7, 8, 9, 16, 17, 18])]
-    print(f"\n      rush-hour median {rush['median'].mean():.1f}  IQR {rush['iqr'].mean():.1f}")
-    print(f"      off-peak  median {quiet['median'].mean():.1f}  IQR {quiet['iqr'].mean():.1f}")
-    ratio = rush["iqr"].mean() / max(quiet["iqr"].mean(), 1e-9)
-    print(f"      spread ratio rush/off-peak: {ratio:.2f}x")
+    # Pool the raw rows instead of averaging the hourly figures. Averaging
+    # hourly IQRs gives hour 3 (14 rows) the same vote as hour 8 (2,224).
+    rush_hours = [7, 8, 9, 16, 17, 18]
+    is_rush = delayed["hour"].isin(rush_hours)
+    rush_rows = delayed.loc[is_rush, "min_delay"]
+    quiet_rows = delayed.loc[~is_rush, "min_delay"]
+
+    def spread(s):
+        return s.quantile(0.75) - s.quantile(0.25)
+
+    print(f"\n      pooled rows     n      median  IQR   p90")
+    for name, s in (("rush-hour", rush_rows), ("off-peak ", quiet_rows)):
+        print(f"      {name}  {len(s):>7,}  {s.median():>6.1f}  {spread(s):>4.1f}  {s.quantile(0.90):>4.1f}")
+    ratio = spread(rush_rows) / max(spread(quiet_rows), 1e-9)
+    print(f"      spread ratio rush/off-peak (IQR): {ratio:.2f}x")
     if ratio > 1.3:
-        print("      >>> SPREAD VARIES BY HOUR. This is your Day 4 finding,")
-        print("          showing up on Day 1. Write a prediction in your log.")
-    print()
+        print("      >>> Rush hour is WIDER than off-peak. Hour is a candidate")
+        print("          group for the Day 4 audit.")
+    elif ratio < 1 / 1.3:
+        print("      >>> Rush hour is NARROWER than off-peak. This reverses the")
+        print("          naive guess. Hour may still matter, in the other direction:")
+        print("          a global width would then over-cover rush and under-cover")
+        print("          the quiet hours. Record it as a finding, not a failure.")
+    else:
+        print("      >>> Spread is similar. Hour is probably not your strongest")
+        print("          group. Look at delay code and line instead.")
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
     axes[0].plot(by_hour.index, by_hour["median"], marker="o")
     axes[0].set_title("Median delay by hour")
     axes[1].plot(by_hour.index, by_hour["iqr"], marker="o", color="crimson")
-    axes[1].set_title("Spread (IQR) by hour  <- the one that matters")
+    axes[1].set_title("Spread (IQR) by hour")
     for ax in axes:
         ax.set_xlabel("hour of day")
         ax.set_ylabel("minutes")

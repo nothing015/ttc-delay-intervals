@@ -53,10 +53,12 @@ MIN_DELAY_THRESHOLD = 1
 # latest. Rows before TRAIN_END are training; rows from TRAIN_END up to
 # CALIB_END are calibration; everything after CALIB_END is test.
 #
-# These are placeholders until Day 1 Block D, where you set them from the
-# actual date range in your data. Aim for roughly 60 / 20 / 20.
+# Set on Day 1 from the real date range (2023-01-01 to 2026-09-30) by taking
+# the nearest month start to the 60% and 80% row quantiles. Slice counts are
+# in docs/log.md. Changing these invalidates every result from Day 3 onward,
+# so they are not to be nudged after the test set has been measured.
 TRAIN_END = "2025-04-01"
-CALIB_END = "2025-11-01"
+CALIB_END = "2026-01-01"
 
 # The coverage level we are targeting. 0.90 means "90% of the time the true
 # delay should fall inside the interval".
@@ -105,3 +107,50 @@ REQUIRED_COLUMNS = [
 # Sanity bounds. A delay of 1200 minutes (20 hours) is not a delay, it is a
 # data-entry error. Quality check #2.
 MAX_PLAUSIBLE_DELAY_MIN = 720  # 12 hours
+
+
+# ---------------------------------------------------------------------------
+# Which lines we model, and the groups for the Day 4 audit
+# ---------------------------------------------------------------------------
+# Decided on Day 1 from 06_peek.py. The `line` column holds more than the
+# four subway lines:
+#   SRT             Line 3 Scarborough RT. 339 delayed rows, last one
+#                   24 July 2023, so it sits entirely inside the training
+#                   period and contributes nothing to calibration or test.
+#                   Its equipment codes (ER*, SR*) are also absent from the
+#                   main code key. Dropped.
+#   YUS, BD LINE 2  Alternate spellings of YU and BD. Remapped, not dropped.
+#   62 MORTIMER, 506 CARLTON, 504 KING, 20 CLIFFSIDE, 109 RANEE,
+#   76 ROYAL YORK SOUTH, 77 SWANSEA
+#                   Bus and streetcar routes, one row each. Wrong mode of
+#                   transport for this dataset. Dropped.
+MODEL_LINES = ("YU", "BD", "SHP")
+
+LINE_ALIASES = {
+    "YUS": "YU",
+    "BD LINE 2": "BD",
+}
+
+# Hour bands for group-conditional (Mondrian) conformal on Day 4. Raw hours
+# do not work: hours 2, 3 and 4 hold 141, 14 and 21 delayed rows in the
+# entire dataset, far too few to estimate a 90% quantile. Verified with
+# 05_groups.py, where every band below clears 400 calibration rows.
+HOUR_BANDS = [
+    ("overnight 00-04", range(0, 5)),
+    ("early 05-06", range(5, 7)),
+    ("AM peak 07-09", range(7, 10)),
+    ("midday 10-15", range(10, 16)),
+    ("PM peak 16-18", range(16, 19)),
+    ("evening 19-23", range(19, 24)),
+]
+
+# How many calibration rows a group needs before its own 90% quantile means
+# anything. The empirical quantile's error scales like 1/sqrt(n), so this is
+# a floor, not a target.
+MIN_ROWS_PER_GROUP = 100
+
+# The delay-code key that 03_explore.py joins against. Code_Descriptions.csv
+# has clean CODE and DESCRIPTION columns. Note that Code_Descriptions.xlsx is
+# CSV text with an .xlsx name, and ttc-subway-delay-codes.xlsx puts the
+# subway and SRT code lists side by side in one sheet, so neither is used.
+CODE_KEY_FILE = "Code_Descriptions.csv"

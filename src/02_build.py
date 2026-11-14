@@ -21,6 +21,7 @@ quality checks the project needs, and it is the thing that makes the
 pipeline trustworthy.
 """
 
+import re
 import sys
 
 import pandas as pd
@@ -65,28 +66,83 @@ def normalise_name(name):
     return text.strip("_")
 
 
-def is_delay_file(path):
-    """True if this looks like a delay data file rather than the readme.
+def is_real_excel(path):
+    """True if the file really is an Excel workbook, judged by its contents.
 
-    The readme and the code lookup live in the same folder; we load those
-    separately.
+    An .xlsx file is a zip archive, and every zip archive starts with the two
+    bytes 'PK'. The portal serves at least one file named .xlsx that is really
+    plain CSV text, so the extension cannot be trusted. pandas refuses to open
+    that file with "Excel file format cannot be determined".
     """
-    stem = path.stem.lower()
-    if "readme" in stem or "code" in stem:
-        return False
-    return path.suffix.lower() in {".xlsx", ".xls"}
+    with open(path, "rb") as f:
+        return f.read(2) == b"PK"
+
+
+def years_in_name(path):
+    """Four-digit years appearing in a filename: '...-jan-2014-april-2017' -> [2014, 2017]."""
+    return [int(y) for y in re.findall(r"(?:19|20)\d\d", path.stem)]
+
+
+def pick_delay_files():
+    """Choose which files in data/raw/ to read, and say why for every skip.
+
+    Three rules, each printed when it fires so nothing disappears quietly:
+      1. The readme and the delay-code key are not delay data.
+      2. If a file's name says its data is entirely before START_DATE, don't
+         read it. We would only throw every row away at the date filter.
+      3. If both X.xlsx and X.csv exist, they hold the same data. Use the CSV.
+    """
+    candidates = [
+        p
+        for p in sorted(RAW_DIR.iterdir())
+        if p.suffix.lower() in {".xlsx", ".xls", ".csv"}
+        and "readme" not in p.stem.lower()
+        and "code" not in p.stem.lower()
+    ]
+    csv_stems = {p.stem.lower() for p in candidates if p.suffix.lower() == ".csv"}
+    start_year = int(START_DATE[:4]) if START_DATE else None
+
+    chosen = []
+    for path in candidates:
+        years = years_in_name(path)
+        if start_year and years and max(years) < start_year:
+            print(f"  skip {path.name}: name says {max(years)} or earlier, before START_DATE")
+            continue
+        if path.suffix.lower() != ".csv" and path.stem.lower() in csv_stems:
+            print(f"  skip {path.name}: a .csv copy of the same data exists, using that")
+            continue
+        chosen.append(path)
+    return chosen
+
+
+def read_raw(path):
+    """Read one raw file into a DataFrame, whatever it actually is."""
+    # CSV text, or a file named Excel that is really CSV text.
+    if path.suffix.lower() == ".csv" or not is_real_excel(path):
+        if path.suffix.lower() != ".csv":
+            print(f"    note: {path.name} is named Excel but is plain text; reading as CSV")
+        # utf-8-sig drops an invisible byte-order mark some exports start with.
+        # 'replace' means a stray odd character in a station name cannot crash
+        # the whole build.
+        return pd.read_csv(path, encoding="utf-8-sig", encoding_errors="replace")
+
+    workbook = pd.ExcelFile(path)
+    if len(workbook.sheet_names) > 1:
+        print(
+            f"    !! {path.name} has {len(workbook.sheet_names)} sheets. "
+            f"Reading ONLY the first; rows on the other sheets are NOT included."
+        )
+    # Passing the open ExcelFile avoids re-reading the file from disk.
+    return pd.read_excel(workbook, sheet_name=0)
 
 
 def load_one_file(path):
-    """Read one Excel file and rename its columns to the canonical set.
+    """Read one raw file and rename its columns to the canonical set.
 
     Returns a DataFrame, or None if the file could not be used.
     """
     try:
-        # sheet_name=0 reads the first worksheet. Some TTC files have one
-        # sheet per month; if you hit one, sheet_name=None returns a dict of
-        # every sheet and you concatenate those.
-        frame = pd.read_excel(path, sheet_name=0)
+        frame = read_raw(path)
     except Exception as error:
         print(f"    !! could not read {path.name}: {error}")
         return None
@@ -105,32 +161,51 @@ def load_one_file(path):
     if unknown:
         print(f"    note: {path.name} has unrecognised columns: {unknown}")
 
+    # Step 4: check THIS file has the columns we need, before it is stacked
+    # with the others. Checking after stacking is useless: if 2023 is missing
+    # min_delay but 2024 has it, the combined table has the column and the
+    # check passes, while every 2023 row silently becomes null and is thrown
+    # away later.
+    check_schema(frame, path.name)
+
+    # Step 5: build the timestamp NOW, one file at a time, never after the
+    frame = build_event_time(frame, path.name)
+
     frame["source_file"] = path.name
     return frame
 
 
-def check_schema(frame):
-    """Stop the build if a required column is missing.
+def check_schema(frame, name):
+    """Stop the build if a required column is missing from THIS file.
 
     QUALITY CHECK 1 of 4. Deliberately fatal: a missing column means the
     file format changed, and quietly carrying on would produce a Parquet
     that looks fine and is wrong.
+
+    Runs per file, never on the stacked table. A column missing from one
+    year is hidden once the years are concatenated, because the other
+    years supply it and the rows from the odd one out just fill with
+    nulls.
     """
     missing = [c for c in REQUIRED_COLUMNS if c not in frame.columns]
     if missing:
-        print(f"\nSCHEMA CHECK FAILED. Missing columns: {missing}")
-        print(f"Columns actually present: {sorted(frame.columns)}")
-        print("\nAdd the new spelling to COLUMN_ALIASES in config.py.")
+        print(f"\n{'=' * 70}")
+        print(f"SCHEMA CHECK FAILED in {name}")
+        print(f"{'=' * 70}")
+        print(f"  missing  : {missing}")
+        print(f"  present  : {sorted(c for c in frame.columns if c != 'source_file')}")
+        print("\nOne of the present columns is probably the missing one under a")
+        print("new name. Add that spelling to COLUMN_ALIASES in src/config.py,")
+        print("mapping it to the canonical name, then run this script again.")
         sys.exit(1)
-    print("  schema check: all required columns present")
 
 
-def build_event_time(frame):
+def build_event_time(frame, name):
     """Combine the separate date and time columns into one timestamp.
 
-    This is the fiddliest part of the whole script. The TTC stores the date
-    in one column and the time in another, and the time arrives in at least
-    three different shapes depending on the file:
+    Called once per file. This is the fiddliest part of the whole script. The
+    TTC stores the date in one column and the time in another, and the time
+    arrives in at least three different shapes depending on the file:
 
       - a string like '08:42'
       - a datetime where only the time part is meaningful
@@ -140,16 +215,25 @@ def build_event_time(frame):
     the result. Anything that fails becomes NaT (not-a-time) rather than
     crashing, and we count the failures.
     """
+    if "date" not in frame.columns or "time" not in frame.columns:
+        print(f"    !! {name} has no date or time column; every row from it will be dropped")
+        frame["event_time"] = pd.NaT
+        return frame
+
     date_text = pd.to_datetime(frame["date"], errors="coerce").dt.strftime("%Y-%m-%d")
 
     time_raw = frame["time"]
 
-    # If the time column came through as datetime-like, take its time part.
     if pd.api.types.is_datetime64_any_dtype(time_raw):
+        # A datetime where only the time part matters.
         time_text = time_raw.dt.strftime("%H:%M")
+    elif pd.api.types.is_numeric_dtype(time_raw):
+        # Excel stores a time of day as a fraction of 24 hours: 0.5 == 12:00.
+        offset = pd.to_timedelta(time_raw, unit="D")
+        time_text = (pd.Timestamp("2000-01-01") + offset).dt.strftime("%H:%M")
     else:
-        # Otherwise treat it as text. Trim to the first five characters so
-        # '08:42:00' and '08:42' both work.
+        # Text. Trim to the first five characters so '08:42:00' and '08:42'
+        # both work.
         time_text = time_raw.astype(str).str.strip().str[:5]
 
     combined = date_text + " " + time_text
@@ -157,7 +241,7 @@ def build_event_time(frame):
 
     n_bad = int(frame["event_time"].isna().sum())
     if n_bad:
-        print(f"  note: {n_bad:,} rows had an unparseable date or time")
+        print(f"    note: {name}: {n_bad:,} rows had an unparseable date or time")
 
     return frame
 
@@ -181,13 +265,15 @@ def main():
     check_parquet_engine()
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    paths = sorted(p for p in RAW_DIR.iterdir() if is_delay_file(p))
+    print("FILE SELECTION")
+    print("-" * 70)
+    paths = pick_delay_files()
     if not paths:
         print(f"No delay files found in {RAW_DIR}.")
         print("Run python src/01_download.py first, or put the files there by hand.")
         sys.exit(1)
 
-    print(f"Found {len(paths)} delay files.\n")
+    print(f"\nReading {len(paths)} files.\n")
     print("ROW ACCOUNTING")
     print("-" * 70)
 
@@ -208,10 +294,10 @@ def main():
     data = pd.concat(frames, ignore_index=True)
     log_stage("TOTAL read", len(data))
 
-    check_schema(data)
+    print(f"  schema check: passed for all {len(frames)} files")
 
     # ---- types -----------------------------------------------------------
-    data = build_event_time(data)
+    # (event_time was already built per file inside load_one_file.)
 
     # errors='coerce' turns anything non-numeric into NaN instead of raising.
     for column in ("min_delay", "min_gap"):
@@ -259,7 +345,7 @@ def main():
     # ---- derived columns -------------------------------------------------
     # Added here so every downstream script gets them for free.
     data["hour"] = data["event_time"].dt.hour
-    data["dayofweek"] = data["event_time"].dt.dayofweek  # Monday = 0
+    data["dayofweek"] = data["event_time"].dt.day_of_week  # Monday = 0
     data["is_weekend"] = data["dayofweek"] >= 5
     data["month"] = data["event_time"].dt.to_period("M").astype(str)
 
@@ -269,6 +355,17 @@ def main():
     n_actual = int((data["min_delay"] >= 1).sum())
 
     data = data.sort_values("event_time").reset_index(drop=True)
+
+    # The raw date and time columns are fully replaced by event_time, and
+    # their contents differ between Excel and CSV files.
+    data = data.drop(columns=["date", "time"])
+
+    # Parquet needs every column to hold ONE type. A column mixing, say, Excel
+    # numbers and CSV text cannot be written, so turn any leftover mixed
+    # column into text.
+    for column in data.columns:
+        if data[column].dtype == "object":
+            data[column] = data[column].astype("string")
 
     # ---- write -----------------------------------------------------------
     data.to_parquet(DELAYS_PARQUET, index=False)
