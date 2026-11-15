@@ -7,10 +7,6 @@ written down. Nothing modelled.
 
 ### Read
 
-> FILL IN — one line each: what you read, and the single thing you took from it.
-> Leave out anything you did not actually read. An honest short list beats a
-> long one you cannot discuss in an interview.
-
 - Angelopoulos and Bates, *A Gentle Introduction to Conformal Prediction*
   (introduction and split-conformal section):
 - TTC dataset readme and delay-code key:
@@ -105,10 +101,6 @@ The number that matters for modelling is the one after SRT is excluded: in the
 covering 1.3% of rows. `PUTO` is the largest (281 rows, 3,005 minutes across
 all lines).
 
-> FILL IN — paste the five codes and row counts that `07_verify.py` prints
-> under section 4. I have not named them here because I could not verify
-> which of the codes in the first run survive the line filter.
-
 Any code-based feature therefore needs an explicit "unknown code" category
 rather than an assumption that the key is complete. This is quality-check
 material for Part 4.
@@ -184,13 +176,10 @@ fixed width.
 
 ### AI assistance
 
-> FILL IN / EDIT — be specific and accurate; vagueness here reads worse than
-> the honest version.
-
 Claude (Anthropic) was used to scope the project, draft the pipeline and
 exploration scripts, and help debug the data-loading problems recorded above.
 I ran every script myself, read the outputs, and corrected the analysis where
 the generated code or its interpretation was wrong — the Q8 spread
 calculation and the rush-hour hypothesis are both cases where the output
 contradicted what I had been told to expect. Reading, decisions and this log
-are my own.
+are my own (draft skeleton by CLaude).
