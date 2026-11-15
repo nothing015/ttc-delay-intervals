@@ -286,4 +286,4 @@ I ran every script myself, read the outputs, and corrected the analysis where
 the generated code or its interpretation was wrong — the Q8 spread
 calculation and the rush-hour hypothesis are both cases where the output
 contradicted what I had been told to expect. Reading, decisions and this log
-are my own.
+are my own (draft skeleton by CLaude).
