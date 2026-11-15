@@ -154,3 +154,29 @@ MIN_ROWS_PER_GROUP = 100
 # CSV text with an .xlsx name, and ttc-subway-delay-codes.xlsx puts the
 # subway and SRT code lists side by side in one sheet, so neither is used.
 CODE_KEY_FILE = "Code_Descriptions.csv"
+
+# ---------------------------------------------------------------------------
+# Day 2: choosing a baseline without touching calibration or test
+# ---------------------------------------------------------------------------
+# Comparing baselines needs held-out data, but the calibration slice is
+# reserved for Day 3's conformal quantile and the test slice is measured
+# once at the end. So the comparison uses a VALIDATION slice cut from the
+# end of the training period: rows from VALID_START up to TRAIN_END.
+#
+#   [ fit ............ | valid ] [ calibration ] [ test ]
+#   2023-01-01     2025-01-01  2025-04-01    2026-01-01
+#
+# Once a baseline is chosen it is refitted on fit + valid (all of training)
+# before Day 3. Calibration and test are never used to choose anything.
+VALID_START = "2025-01-01"
+
+# The quantiles every baseline predicts. 0.5 is the typical delay; 0.9 is
+# the upper bound a rider cares about ("90% chance it clears within X").
+QUANTILES = (0.5, 0.9)
+
+# A station or delay code needs this many FIT rows to get its own category.
+# Rarer ones are pooled into OTHER. Learned from the fit slice only.
+MIN_CATEGORY_ROWS = 30
+
+# Fitted models are written here. Ignored by git: they are rebuilt by script.
+MODELS_DIR = PROJECT_ROOT / "models"

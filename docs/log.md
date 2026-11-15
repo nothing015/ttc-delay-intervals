@@ -1,15 +1,19 @@
 # Project log
 
-## Day 1 — 13–14 November 2026
+Japan has public transport scheduling which is always on time - which is fascinating.
+On the other hand Instacart's business model works how it engineers quantile regression into its system.
+
+
+I wanted to run an analysis on our very own TTC subway lines based on the aforementioned moivation, after facing countless delays..
+This is a retrospective analysis rather than a deployable rider-facing
+tool
+
+## Day 1
 
 Goal for the day: raw files in, one clean Parquet out, the prediction target
 written down. Nothing modelled.
 
 ### Read
-
-> FILL IN — one line each: what you read, and the single thing you took from it.
-> Leave out anything you did not actually read. An honest short list beats a
-> long one you cannot discuss in an interview.
 
 - Angelopoulos and Bates, *A Gentle Introduction to Conformal Prediction*
   (introduction and split-conformal section):
@@ -105,10 +109,6 @@ The number that matters for modelling is the one after SRT is excluded: in the
 covering 1.3% of rows. `PUTO` is the largest (281 rows, 3,005 minutes across
 all lines).
 
-> FILL IN — paste the five codes and row counts that `07_verify.py` prints
-> under section 4. I have not named them here because I could not verify
-> which of the codes in the first run survive the line filter.
-
 Any code-based feature therefore needs an explicit "unknown code" category
 rather than an assumption that the key is complete. This is quality-check
 material for Part 4.
@@ -182,10 +182,103 @@ and streetcar routes; `station` contains entrance and platform annotations
 between stations (`UNION STATION TO ST AN`). Several values look cut off at a
 fixed width.
 
-### AI assistance
+## Day 2
+Correction 1: baselines are not scored on the test set. The plan says "scored on a temporal test set". That breaks the project's own rule: the test set is measured once, at the end. The calibration set cannot be used either, because Day 3 needs it untouched for the conformal quantile. So choosing between baselines needs a fourth slice, cut from the end of the training period:
 
-> FILL IN / EDIT — be specific and accurate; vagueness here reads worse than
-> the honest version.
+[ fit ................ | valid ] [ calibration ] [ test ]
+2023-01-01        2025-01-01  2025-04-01      2026-01-01
+
+Correction 2: a plain station-by-hour median does not work. Only a few dozen stations have enough rows. The baseline uses a fallback instead: station and hour band if that cell has at least 30 training rows, otherwise line and hour band, otherwise line, otherwise the overall median.
+
+### Selection Rule (Step 5)
+I will choose the baseline with the lowest pinball loss at the 90th percentile on the validation slice.
+- Writing it first means the choice cannot drift toward whichever number looks best afterwards. Why the 90th rather than the 50th: the deliverable is "90% chance it clears within X", which is an upper bound.
+
+
+### Baselines (Step 6)
+
+**Selection rule, fixed in `08_baselines.py` before the run:** lowest pinball
+loss at q=0.9 on the validation slice (Jan–Mar 2025, 2,523 rows). Models were
+fitted on the fit slice (17,281 rows). Calibration and test were not used.
+
+| Model | pinball q50 | pinball q90 | share below q90 | q90 below q50 |
+|---|---|---|---|---|
+| 0 global quantiles | 2.131 | 2.251 | 91.1% | 0.0 |
+| 1 group quantiles | 2.098 | 2.316 | 89.5% | 0.0 |
+| 2 linear quantile | 1.995 | 1.797 | 89.0% | 0.0 |
+| 3 gradient boosting | 1.987 | 1.774 | 88.5% | 0.0 |
+
+**Chosen by the rule: gradient boosting.** Its q90 pinball loss is 21.2% below
+the global floor. The margin over linear quantile regression is 1.3%
+(1.774 against 1.797), which on 2,523 validation rows is too small to call one
+better than the other. Boosting wins on the rule I wrote down, not by a margin
+I would defend.
+
+**The models improve the upper bound much more than the median.** Against the
+floor, boosting cuts q50 loss by 6.8% but q90 loss by 21.2%. My reading: the
+delay code mostly separates the long incidents from the routine ones, so it
+sharpens the tail more than the typical case. That fits the Day 1 finding
+that code, not hour, is where the spread lives.
+
+**The station-by-hour baseline is worse than one global number at q90**
+(2.316 against 2.251). It answered 82% of validation rows from a
+station × hour-band cell, so this is not a fallback problem. A 90th percentile
+estimated from as few as 30 rows is noisy, and that noise costs more than the
+station detail gains. Same conclusion as Day 1's decision not to use station
+as a conformal group, reached from a different direction.
+
+**No model hits 90% on new data.** Boosting's own q90 covers 88.5% of
+validation delays, and the models that learned more undercover more. Global
+quantiles overshoot (91.1%). None of these has a coverage guarantee; that gap
+is what Day 3's conformal step corrects, using the calibration slice.
+
+**No quantile crossing.** The predicted q90 was never below the predicted q50.
+
+Features: 61 code groups and 75 station groups, learned from the fit slice;
+rarer codes and stations, and anything first seen later, pool into OTHER.
+
+### Final model (Step 7)
+
+Refitted gradient boosting on fit + valid: 19,804 rows, all of training.
+Saved to `models/final.joblib` with its encoder, which was also refitted on
+those 19,804 rows. Calibration and test still untouched.
+
+The validation months were held back only to choose a model. Once the choice
+was made they were just the most recent training data, so leaving them out
+would have made the model worse for no gain.
+
+In-sample share below q90 is 90.6%, against 88.5% on validation in Step 6.
+The in-sample figure is measured on rows the model was fitted on, so it is
+optimistic by design and is not a result. The 2-point gap between the two is
+a small example of why Day 3 calibrates on held-out rows rather than training
+rows.
+
+### Leakage check (Step 8)
+
+Same boosting median model, two ways of holding out 2,523 training rows:
+
+| Split | q50 pinball loss |
+|---|---|
+| Temporal (fit → valid, Jan–Mar 2025) | 1.987 |
+| Random, mean of 5 seeds | 1.920 (range 1.806 to 2.120) |
+
+**The temporal result sits inside the random range, so I found little
+leakage with these features.** The random split averages 3.4% lower, but
+five random held-out sets spread from 1.806 to 2.120, a range far wider than
+that gap. None of my features carries the date (no year, month or trend),
+which closes the main route for the future to leak into the past. I am
+keeping the temporal split anyway: it is the only one that matches how the
+model would be used, and a small gap here does not prove there is none
+elsewhere.
+
+**A side result about Step 6.** Swapping one random set of 2,523 held-out rows
+for another moved the median loss by up to 0.31 minutes. That is a rough
+measure of how noisy a 2,523-row comparison is. It supports calling the 1.3%
+gap between boosting and linear quantile regression a tie. This check covers
+only the median and five seeds, so I treat it as a sense of scale, not a
+formal test.
+
+### AI assistance
 
 Claude (Anthropic) was used to scope the project, draft the pipeline and
 exploration scripts, and help debug the data-loading problems recorded above.

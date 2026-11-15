@@ -9,3 +9,5 @@ docs/figures/
 .vscode/
 Thumbs.db
 desktop.ini
+
+models/
