@@ -1,7 +1,15 @@
 # TTC delay intervals
 
-Predicting how long a Toronto subway delay will last — as a calibrated
-interval with a coverage guarantee, not a single number.
+Japan's railways are famous for running to the minute, which fascinates me.
+Instacart takes a different angle on lateness: it uses quantile regression to
+estimate an upper bound on delivery time and plans around that bound rather
+than the average
+([InfoQ, 2017](https://www.infoq.com/news/2017/01/ripert-instacart-ml-optimization)).
+
+After countless delays on the TTC, I wanted to ask the same question of our
+own subway: not "how long is a delay on average" but "how long, nine times
+out of ten". This is a retrospective analysis rather than a deployable
+rider-facing tool.
 
 A rider on a platform does not benefit from "expect 7 minutes." They
 benefit from "90% chance service resumes within 14 minutes." This project

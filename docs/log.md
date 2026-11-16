@@ -1,13 +1,5 @@
 # Project log
 
-Japan has public transport scheduling which is always on time - which is fascinating.
-On the other hand Instacart's business model works how it engineers quantile regression into its system.
-
-
-I wanted to run an analysis on our very own TTC subway lines based on the aforementioned moivation, after facing countless delays..
-This is a retrospective analysis rather than a deployable rider-facing
-tool
-
 ## Day 1
 
 Goal for the day: raw files in, one clean Parquet out, the prediction target
@@ -107,7 +99,15 @@ a separate file, `ttc-subway-delay-codes.xlsx`.
 The number that matters for modelling is the one after SRT is excluded: in the
 33,815-row modelling population, 5 of 129 codes are absent from the key,
 covering 1.3% of rows. `PUTO` is the largest (281 rows, 3,005 minutes across
-all lines).
+all lines). The five, as printed by section 4 of `07_verify.py`:
+
+| Code | Rows in population |
+|---|---|
+| `PUTO` | 281 |
+| `SUL` | 121 |
+| `MUFL` | 17 |
+| `MUBIO` | 17 |
+| `TUAV` | 1 |
 
 Any code-based feature therefore needs an explicit "unknown code" category
 rather than an assumption that the key is complete. This is quality-check
@@ -118,7 +118,8 @@ material for Part 4.
 The population is subway delay incidents logged by the TTC on Line 1 (YU),
 Line 2 (BD) and Line 4 (SHP) between 1 January 2023 and 30 September 2026,
 restricted to incidents where the recorded delay was at least one minute —
-34,163 of the 97,136 logged records. The target is `min_delay`, the minutes
+33,815 of the 97,136 logged records (34,163 delayed rows before the line
+filter). The target is `min_delay`, the minutes
 of delay to service caused by that incident, and the deliverable is a 90%
 prediction interval for it rather than a point estimate. At prediction time I
 assume the station, line, timestamp, day of week and the TTC's delay reason
@@ -182,17 +183,76 @@ and streetcar routes; `station` contains entrance and platform annotations
 between stations (`UNION STATION TO ST AN`). Several values look cut off at a
 fixed width.
 
-## Day 2
-Correction 1: baselines are not scored on the test set. The plan says "scored on a temporal test set". That breaks the project's own rule: the test set is measured once, at the end. The calibration set cannot be used either, because Day 3 needs it untouched for the conformal quantile. So choosing between baselines needs a fourth slice, cut from the end of the training period:
+## Day 2 — 15 November 2026
 
+Goal for the day: four baselines scored on held-out data, one chosen by a rule
+fixed in advance, and one saved model for Day 3. Calibration and test not used
+by anything.
+
+### Read
+
+> FILL IN — one line each, only what you actually read: what it was, and the
+> one thing you took from it.
+
+- Pinball loss:
+- Quantile regression (introduction):
+- scikit-learn `HistGradientBoostingRegressor` page (quantile loss,
+  categorical features):
+
+### Two corrections to the plan
+
+**Correction 1: baselines are not scored on the test set.** The plan said
+"scored on a temporal test set". That breaks the project's own rule that the
+test set is measured once, at the end. The calibration set cannot be used
+either, because Day 3 needs it untouched for the conformal quantile. So
+choosing between baselines needs a fourth slice, cut from the end of the
+training period:
+
+```
 [ fit ................ | valid ] [ calibration ] [ test ]
 2023-01-01        2025-01-01  2025-04-01      2026-01-01
+```
 
-Correction 2: a plain station-by-hour median does not work. Only a few dozen stations have enough rows. The baseline uses a fallback instead: station and hour band if that cell has at least 30 training rows, otherwise line and hour band, otherwise line, otherwise the overall median.
+**Correction 2: a plain station-by-hour median does not work.** Only a few
+dozen stations have enough rows. The baseline uses a fallback instead:
+station and hour band if that cell has at least 30 fit rows, otherwise line
+and hour band, otherwise line, otherwise the overall value.
 
-### Selection Rule (Step 5)
-I will choose the baseline with the lowest pinball loss at the 90th percentile on the validation slice.
-- Writing it first means the choice cannot drift toward whichever number looks best afterwards. Why the 90th rather than the 50th: the deliverable is "90% chance it clears within X", which is an upper bound.
+### Decisions
+
+**`VALID_START = 2025-01-01`.** Validation is January to March 2025, the last
+three months of training: 2,523 rows. Fit is everything before it: 17,281
+rows. Together they are the 19,804 training rows `07_verify.py` reports for
+the modelling population, so the population is defined the same way in both
+places. Calibration (6,563) and test (7,448) also match.
+
+**Every baseline predicts two quantiles, 0.5 and 0.9.** The 0.9 is the
+deliverable, an upper bound. The 0.5 is kept so Day 3 can choose between a
+one-sided bound and an interval around the median.
+
+**Codes and stations need 30 fit rows for their own category.** Rarer ones,
+and any value first seen after the fit slice, pool into `OTHER`. The category
+lists are learned from the fit slice only, so calibration and test cannot
+influence the features. This is also how codes missing from the official key
+are handled: they are just more categories, or `OTHER`.
+
+**`min_gap` is not a feature.** It is the gap between trains caused by the
+delay, so using it would predict the delay from its own consequence.
+
+**Models 2 and 3 fit on `log1p(min_delay)`.** Delays are heavily skewed
+(skew 21.5 raw, 1.82 after `log1p`). Quantiles survive any increasing
+transform, so converting back with `expm1` gives the quantile in minutes with
+no bias.
+
+### Selection rule (Step 5)
+
+I will choose the baseline with the lowest pinball loss at the 90th
+percentile on the validation slice. Why the 90th rather than the 50th: the
+deliverable is "90% chance it clears within X", which is an upper bound.
+
+The rule was fixed in `08_baselines.py` (`SELECTION_RULE`), which prints it
+before any score. I wrote it into this log after the run, so the script, not
+the log, is the evidence that it came first.
 
 
 ### Baselines (Step 6)
@@ -278,12 +338,45 @@ gap between boosting and linear quantile regression a tie. This check covers
 only the median and five seeds, so I treat it as a sense of scale, not a
 formal test.
 
+### Surprised me
+
+**Station detail made the upper bound worse, not better.** The obvious
+baseline, a 90th percentile per station and hour band, lost to one global
+number. More detail is only better when each cell has enough rows to estimate
+a tail quantile.
+
+**A linear model did as well as boosting.** One weight per category came
+within 1.3% of gradient boosting. With these features there seem to be few
+interactions, such as "this code at night", worth learning.
+
+**Nothing broke today.** Every count matched Day 1 on the first run, after
+Day 1 needed three attempts at its own acceptance test.
+
+### Prediction for Day 3
+
+> FILL IN — written before any conformal code. Boosting's own 90th
+> percentile covered 88.5% of validation delays. What do you expect it to
+> cover on the calibration slice before any correction, and will the
+> conformal step widen the bound by a little or a lot? Commit to a number.
+
 ### AI assistance
 
-Claude (Anthropic) was used to scope the project, draft the pipeline and
-exploration scripts, and help debug the data-loading problems recorded above.
-I ran every script myself, read the outputs, and corrected the analysis where
-the generated code or its interpretation was wrong — the Q8 spread
-calculation and the rush-hour hypothesis are both cases where the output
-contradicted what I had been told to expect. Reading, decisions and this log
-are my own (draft skeleton by CLaude).
+> EDIT — check every sentence is true before this goes anywhere public.
+
+Claude (Anthropic) was used throughout.
+
+**Day 1.** Claude helped scope the project, drafted the pipeline and
+exploration scripts, and helped debug the data-loading problems recorded
+above. I ran every script myself, read the outputs, and corrected the
+analysis where the generated code or its interpretation was wrong: the Q8
+spread calculation and the rush-hour hypothesis are both cases where the
+output contradicted what I had been told to expect.
+
+**Day 2.** Claude wrote the Day 2 runbook and the four scripts (`data.py`,
+`08_baselines.py`, `09_fit_final.py`, `10_leakage.py`), and tested them on
+stand-in data matching my Parquet schema before I ran them. The validation
+slice, selection rule and feature set were proposed in that runbook; I
+checked them against the project's rules before accepting them. I ran every
+step on the real data and checked each count against Day 1. Claude drafted
+the Day 2 log entries and journal from my pasted outputs, and I reviewed
+them.
