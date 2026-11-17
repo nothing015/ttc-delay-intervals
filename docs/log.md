@@ -606,6 +606,108 @@ calibration halves are picked by position even if the model returns pandas
 Series. Committed with the design and settings in `f572385`, before any
 group was looked at.
 
+### Understanding before running (Step 4)
+
+All seven self-tests passed: the Mondrian hand case at 50% (global `q_hat`
+10; A gets 2, B gets 20), Mondrian lifting an undercovered simulated group
+to 90%, the Bonferroni z (1.96 for one group, about 2.91 for 14), and the
+day bootstrap matching the textbook interval for independent rows but
+widening about tenfold when whole days hit or miss together. I deferred the
+four hand cases on paper to before the interview because of assignment
+deadlines. They are not done yet.
+
+### Groups (Step 5, `14_define_groups.py`)
+
+Built from 19,804 training rows; 6,563 calibration rows were counted, not
+scored. Line and hour-band counts match `07_verify.py` exactly. 64 codes
+have their own model category; the rest (650 training rows) form "rare or
+new code".
+
+**No known code has a training median between 10 and 20 minutes**, so that
+tier was empty. Codes sit either at 10 minutes or below, or well above 20.
+The tier above 20 minutes had 43 calibration rows, under the 100-row floor,
+so the rule merged it into its only neighbour, 5–10 minutes (1,566 rows).
+
+| Code tier | Codes | Training rows | Calibration rows | Medians | Longest codes |
+|---|---|---|---|---|---|
+| median <= 5 min | 45 | 14,350 | 4,592 | 3 to 5 | `EUBK`, `EUDO`, `EUCD`, `EUNT` |
+| median > 5 min | 19 | 4,804 | 1,609 | 6 to 70 | `MUPR1`, `MUPLB`, `SUUT`, `SUEAS` |
+| rare or new code | — | 650 | 362 | — | — |
+
+12 groups can be flagged (3 lines, 6 hour bands, 3 code tiers), so the
+Bonferroni correction divides by 12.
+
+**What this costs my Day 1 prediction.** The long codes (`MUPR1`, `MUPLB`)
+are under 3% of the merged tier's calibration rows, so their coverage is
+diluted, just as a small group's is diluted in the overall 92.1%. The audit
+cannot test "long-delay codes undercover". Even unmerged, a 43-row tier
+would have been description-only, with an interval too wide to show
+anything. I am keeping the rule as committed rather than redrawing groups,
+and recording this before any group's coverage has been seen: on this data,
+the long-code question is out of reach.
+This entry was written before Step 6 ran, but it missed the Step 5 commit
+(`c41502f` holds only the Step 3 entry). It went in with the Step 7 commit,
+after I had seen calibration coverage by group. No test coverage had been
+seen.
+
+### Mondrian on calibration (Step 6, `15_mondrian.py`)
+
+Calibration rows only; the global `q_hat` recomputed to 0.0835, matching
+Day 3. Temporal split at 2025-08-19, the same as the Day 3 rehearsal. None
+of these `q_hat` values is applied to the test set.
+
+**Random halves (exchangeable by construction): Mondrian works.** One
+global `q_hat` left three groups below 90%, and Mondrian lifted each to
+about 90%:
+
+| Group | Global | Mondrian | Median bound, global → Mondrian |
+|---|---|---|---|
+| median > 5 min | 87.6% | 89.9% | 20.2 → 23.9 min |
+| overnight 00–04 | 88.4% | 90.3% | 13.5 → 15.4 min |
+| early 05–06 | 87.8% | 90.1% | 10.9 → 12.8 min |
+
+It also tightened groups the global bound overcovered: rare or new code
+92.1% → 90.3% (19.4 → 15.6 min), AM peak 92.4% → 90.2% (10.7 → 9.7 min),
+SHP 91.8% → 90.4% (11.0 → 9.0 min). YU and BD sit at about 90% either way:
+the line grouping did not need its own `q_hat`.
+
+**Temporal halves (with the 2025 drift): Mondrian made it worse.** Under
+the global `q_hat`, every later-half group sat at 90.7% or above except
+SHP (87.6%, 129 rows): the drift lifting coverage, as on Day 3. Mondrian
+widened the spread across groups in all three groupings (line 4.5 → 11.2
+points, hour band 2.5 → 5.3, code tier 1.6 → 6.4). SHP fell to 81.4%,
+because its own `q_hat` came from about 145 earlier rows and the later
+rows had moved. A per-group `q_hat` fixes imbalance between groups when the
+data are exchangeable. It does not fix drift over time, and in a small
+group it adds noise. That is the case for adaptive conformal inference, not
+Mondrian, as the next step.
+
+**Against earlier predictions (calibration only).** Day 2 said "rare or
+new code" would undercover first; on calibration it overcovers. Day 1's
+direction for long codes shows up even diluted: the "> 5 min" tier is the
+lowest group. Hour band is weaker than code tier, but overnight and early
+sit about 2 points low, so not flat.
+
+### Prediction for the audit (Step 7, written before `16_audit.py`)
+
+Test coverage was 92.1% against 90.0% on calibration: 2026 lifted
+coverage by about 2 points across the whole distribution. If every group
+moves up by about that much, the groups that were low on calibration land
+near 90%. To be flagged, a group of about 1,800 test delays needs coverage
+below about 88% (adjusted z = 2.87 for 12 groups); smaller groups need
+lower still.
+
+- **Groups flagged UNDERCOVERS: none of the 12.** I expect to report a
+  negative result.
+- **Lowest group: median > 5 min**, about 90% (88.5% to 91.5%). If anything
+  is marked "possible", it is this one.
+- **Lowest hour bands: early 05–06 and overnight**, about 90% to 91%.
+- **Rare or new code: above overall**, about 93%. This reverses my Day 2
+  prediction.
+- **SHP: hard to call.** Its later calibration half was 87.6% on 129 rows,
+  but with 232 test delays its adjusted interval is too wide to flag.
+- **Day 1's `MUPR1` prediction cannot be tested** (Step 5).
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.

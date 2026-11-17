@@ -343,10 +343,18 @@ Already on record:
 - Day 2 journal: the `OTHER` code group will undercover first, then rare
   long-delay codes.
 
-> FILL IN — overall coverage came out at 92.1%, not 90%. Does that change
-> what you expect? How many of the line, hour-band and code groups do you
-> expect to fall below 90%, and which one first? Commit this before Day 4
-> opens `day3_test_rows.parquet`.
+> Written 17 November, after the Step 6 calibration rehearsal and before
+> `16_audit.py` read the per-row file.
+>
+> Overall coverage of 92.1% does change what I expect: the 2026 shift
+> lifted coverage by about 2 points everywhere, so groups that were 1 to
+> 2 points low on calibration should land near 90%. I expect **none of
+> the 12 flaggable groups** to undercover under the Bonferroni rule. The
+> lowest will be the "median > 5 min" code tier (about 90%), then the
+> early and overnight hour bands. "Rare or new code" will sit above
+> overall (about 93%), against my Day 2 prediction. The long-code tier
+> merged into "> 5 min" (43 calibration rows), so the Day 1 `MUPR1`
+> prediction cannot be tested.
 
 ---
 

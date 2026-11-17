@@ -1,0 +1,183 @@
+{
+  "score": "upper",
+  "target_coverage": 0.9,
+  "n_calibration": 6563,
+  "global_q_hat": 0.08350794245162163,
+  "temporal_split": "2025-08-19",
+  "groupings": {
+    "line": [
+      {
+        "group": "YU",
+        "temporal_n": 1819,
+        "temporal_global": 0.9213853765805388,
+        "temporal_mondrian": 0.925783397471138,
+        "temporal_upper_median_global": 11.914327240876947,
+        "temporal_upper_median_mondrian": 12.113724901338642,
+        "random_global_mean": 0.9008974582517817,
+        "random_mondrian_mean": 0.9029791797552198,
+        "full_q_hat": 0.16319869271756815,
+        "full_n": 3659,
+        "full_k": 3294,
+        "full_source": "own"
+      },
+      {
+        "group": "BD",
+        "temporal_n": 1334,
+        "temporal_global": 0.9182908545727136,
+        "temporal_mondrian": 0.9137931034482759,
+        "temporal_upper_median_global": 12.077483162455344,
+        "temporal_upper_median_mondrian": 11.900569790837231,
+        "random_global_mean": 0.9021089090036174,
+        "random_mondrian_mean": 0.899395953369508,
+        "full_q_hat": 0.07525918862059555,
+        "full_n": 2614,
+        "full_k": 2354,
+        "full_source": "own"
+      },
+      {
+        "group": "SHP",
+        "temporal_n": 129,
+        "temporal_global": 0.875968992248062,
+        "temporal_mondrian": 0.813953488372093,
+        "temporal_upper_median_global": 10.999913984303578,
+        "temporal_upper_median_mondrian": 8.954937259236308,
+        "random_global_mean": 0.9179156322882817,
+        "random_mondrian_mean": 0.9040521295517765,
+        "full_q_hat": -0.45526337696247765,
+        "full_n": 290,
+        "full_k": 262,
+        "full_source": "own"
+      }
+    ],
+    "hour_band": [
+      {
+        "group": "overnight 00-04",
+        "temporal_n": 231,
+        "temporal_global": 0.922077922077922,
+        "temporal_mondrian": 0.948051948051948,
+        "temporal_upper_median_global": 13.527990605597974,
+        "temporal_upper_median_mondrian": 15.42718346079943,
+        "random_global_mean": 0.8843522578636975,
+        "random_mondrian_mean": 0.9031886438764577,
+        "full_q_hat": 0.624069054567908,
+        "full_n": 442,
+        "full_k": 399,
+        "full_source": "own"
+      },
+      {
+        "group": "early 05-06",
+        "temporal_n": 327,
+        "temporal_global": 0.908256880733945,
+        "temporal_mondrian": 0.9296636085626911,
+        "temporal_upper_median_global": 10.922960567190101,
+        "temporal_upper_median_mondrian": 12.787017070334054,
+        "random_global_mean": 0.8782990492397957,
+        "random_mondrian_mean": 0.901098096625194,
+        "full_q_hat": 1.4780805625087226,
+        "full_n": 737,
+        "full_k": 665,
+        "full_source": "own"
+      },
+      {
+        "group": "AM peak 07-09",
+        "temporal_n": 515,
+        "temporal_global": 0.9320388349514563,
+        "temporal_mondrian": 0.8951456310679612,
+        "temporal_upper_median_global": 10.735141984725884,
+        "temporal_upper_median_mondrian": 9.692353174007236,
+        "random_global_mean": 0.924411862557869,
+        "random_mondrian_mean": 0.9022167953568669,
+        "full_q_hat": -0.5433740155721303,
+        "full_n": 974,
+        "full_k": 878,
+        "full_source": "own"
+      },
+      {
+        "group": "midday 10-15",
+        "temporal_n": 858,
+        "temporal_global": 0.921911421911422,
+        "temporal_mondrian": 0.9125874125874126,
+        "temporal_upper_median_global": 11.597395417557767,
+        "temporal_upper_median_mondrian": 11.147034956952497,
+        "random_global_mean": 0.9121817849395351,
+        "random_mondrian_mean": 0.9038409734557933,
+        "full_q_hat": -0.23178297219447863,
+        "full_n": 1756,
+        "full_k": 1582,
+        "full_source": "own"
+      },
+      {
+        "group": "PM peak 16-18",
+        "temporal_n": 588,
+        "temporal_global": 0.9200680272108843,
+        "temporal_mondrian": 0.9183673469387755,
+        "temporal_upper_median_global": 11.801336566935927,
+        "temporal_upper_median_mondrian": 11.792712814833804,
+        "random_global_mean": 0.8976134519549545,
+        "random_mondrian_mean": 0.9014227902360299,
+        "full_q_hat": 0.2559038294487177,
+        "full_n": 1180,
+        "full_k": 1063,
+        "full_source": "own"
+      },
+      {
+        "group": "evening 19-23",
+        "temporal_n": 763,
+        "temporal_global": 0.9069462647444299,
+        "temporal_mondrian": 0.9069462647444299,
+        "temporal_upper_median_global": 13.567409446125541,
+        "temporal_upper_median_mondrian": 13.567208645210453,
+        "random_global_mean": 0.8964837963885068,
+        "random_mondrian_mean": 0.9013197695272256,
+        "full_q_hat": 0.32360832580735277,
+        "full_n": 1474,
+        "full_k": 1328,
+        "full_source": "own"
+      }
+    ],
+    "code_tier": [
+      {
+        "group": "median <= 5 min",
+        "temporal_n": 2319,
+        "temporal_global": 0.9228115567054765,
+        "temporal_mondrian": 0.9111686071582579,
+        "temporal_upper_median_global": 9.72271779049107,
+        "temporal_upper_median_mondrian": 9.350327623625425,
+        "random_global_mean": 0.9098976720121881,
+        "random_mondrian_mean": 0.9036125906168462,
+        "full_q_hat": -0.054584953412154746,
+        "full_n": 4592,
+        "full_k": 4134,
+        "full_source": "own"
+      },
+      {
+        "group": "median > 5 min",
+        "temporal_n": 773,
+        "temporal_global": 0.906856403622251,
+        "temporal_mondrian": 0.943078913324709,
+        "temporal_upper_median_global": 20.217154524357227,
+        "temporal_upper_median_mondrian": 23.90409547717875,
+        "random_global_mean": 0.8756943045954919,
+        "random_mondrian_mean": 0.8994123505728264,
+        "full_q_hat": 1.9372112011056046,
+        "full_n": 1609,
+        "full_k": 1449,
+        "full_source": "own"
+      },
+      {
+        "group": "rare or new code",
+        "temporal_n": 190,
+        "temporal_global": 0.9105263157894737,
+        "temporal_mondrian": 0.8789473684210526,
+        "temporal_upper_median_global": 19.373255056719657,
+        "temporal_upper_median_mondrian": 15.574429049056903,
+        "random_global_mean": 0.9206528173788833,
+        "random_mondrian_mean": 0.9031455762509373,
+        "full_q_hat": -2.153906120518416,
+        "full_n": 362,
+        "full_k": 327,
+        "full_source": "own"
+      }
+    ]
+  }
+}
