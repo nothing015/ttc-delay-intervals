@@ -1,0 +1,18 @@
+{
+  "score": "upper",
+  "target_coverage": 0.9,
+  "model": "3 gradient boosting",
+  "train_rows": 19804,
+  "n_calibration": 6563,
+  "k": 5908,
+  "q_hat": 0.08350794245162163,
+  "no_model_bound": 14.0,
+  "raw_q90_coverage_calibration": 0.8976078013103763,
+  "rehearsal_random_mean": 0.9021328458257161,
+  "rehearsal_random_min": 0.88878732480195,
+  "rehearsal_random_max": 0.9082876294942108,
+  "rehearsal_temporal": 0.9183424741011579,
+  "rehearsal_temporal_vs_random": "above",
+  "calibration_upper_median": 11.579615340315678,
+  "calibration_upper_mean": 13.228172040001708
+}
