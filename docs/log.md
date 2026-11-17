@@ -486,6 +486,50 @@ But that is one split on calibration data, and the test set sits 9 months
 after the training period ends, so drift could go the other way. A result
 below 89% would mean 2026 delays ran longer than 2025 predicted.
 
+### Test-set result (Step 7, measured once)
+
+`python src/12_test_once.py --confirm`, once, on 7,448 test delays
+(2026-01-01 to 2026-09-30), with `q_hat` = 0.0835 minutes from 6,563
+calibration rows.
+
+- **Coverage 92.1%**, 95% CI 91.4% to 92.7%, against a 90% target. The
+  expected range if calibration and test are exchangeable was 89.0% to
+  91.0%, so the result is above it, and the whole confidence interval is
+  above 91.0%.
+- **Before conformal:** the model's own q90 covered 91.8%. Conformal added
+  0.3 points.
+- **No-model bound:** one 14-minute upper bound for every delay covered
+  92.9%. The same bound covered 90% of 2025 calibration delays, so delays
+  themselves ran shorter in 2026, not only the model's errors.
+- **Width:** upper bound median 11.5 minutes, mean 13.1. 65% of delays got a
+  tighter bound than the no-model one.
+
+**Reading it.** Conformal guarantees at least 90%, and that held. But the
+result is outside the expected range, so 2025 calibration and 2026 test were
+not exchangeable: 2026 delays ran shorter than 2025 predicted, and the
+intervals were wider than 2026 needed. This is marginal coverage only; it
+says nothing about any line, hour band or delay code. That is Day 4.
+
+**Against my prediction.** I expected about 90.5% (89% to 92%) and leaned
+above 90% because the temporal rehearsal gave 91.8%. The direction was
+right; the result landed 0.1 points above my range. The rehearsal did flag
+this drift.
+
+Nothing was changed after seeing the number. Adaptive conformal inference is
+the method built for drift like this; it is a next step for the write-up,
+not something applied to this result.
+
+### Coverage figure (Step 8, `13_plot.py`)
+
+Drew `docs/figures/day3_coverage.png` from the saved results, at ten levels
+from 50% to 95% fixed before the run. Measured coverage is above the level
+asked for at all ten, and none of the 95% intervals crosses zero. The gap is
+about 3 to 4 points between 55% and 85%, 2.1 at 90% and 1.4 at 95%. So the
+2026 shift is across the whole distribution of scores, not only the upper
+tail: the model's bound was too generous at every level. The ten points come
+from the same 7,448 delays, so they are one finding, not ten. The figure
+adds no new look at the test set. Marginal coverage only.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
