@@ -267,13 +267,19 @@ random sets (0.31 minutes) also gives a rough sense of how noisy any
 
 ## 8. My prediction for Day 3 (written before any conformal code)
 
-> FILL IN — commit to numbers before Day 3. Boosting's own q90 covered
-> 88.5% of validation delays.
+> Written 16 November, before any conformal code ran. Boosting's own q90
+> covered 88.5% of validation delays.
 >
 > - Raw coverage of the q90 on the calibration slice, before correction:
-> - How much the conformal step will widen the bound (a little or a lot,
->   and why):
-> - Which group I expect to undercover first on Day 4:
+>   **about 88.5%** (87.5% to 89.5%). Calibration is unseen data, like
+>   validation.
+> - How much the conformal step will widen the bound: **a little, `q_hat`
+>   around 1 minute.** It only needs to catch the ~1.5% of delays just above
+>   the predicted bound.
+> - Which group I expect to undercover first on Day 4: **the `OTHER` code
+>   group**, then rare long-delay codes such as `MUPR1`. `OTHER` pools rare
+>   and never-seen codes with nothing in common, so the model's q90 fits it
+>   worst, and one correction in minutes is small next to delays of an hour.
 
 ---
 

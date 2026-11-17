@@ -294,7 +294,13 @@ all delayed rows, 54 codes are missing from it (778 rows, 2.3%), but most of
 those are SRT equipment codes kept in a different file. In my modelling
 population it is **5 of 129 codes, 1.3% of rows**. The largest is `PUTO`.
 
-> TODO: paste the five codes and counts from section 4 of `07_verify.py`.
+| Code | Rows in population |
+|---|---|
+| `PUTO` | 281 |
+| `SUL` | 121 |
+| `MUFL` | 17 |
+| `MUBIO` | 17 |
+| `TUAV` | 1 |
 
 **Lines.** The `line` column has 13 values, not 4:
 

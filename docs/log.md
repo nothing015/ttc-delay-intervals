@@ -436,6 +436,22 @@ why a worse model gives wider intervals, not invalid ones.
 Self-test (`conformal.py`): all four checks passed, including a simulation
 of 20,000 made-up worlds whose coverage matched k / (n + 1) = 91/101.
 
+### Prediction for the calibration step (written 16 November, before running 11_calibrate.py)
+
+- **The model's own 90th percentile will cover about 88.5% of calibration
+  delays** (I'd accept 87.5% to 89.5%). Validation gave 88.5% and the
+  in-sample figure was 90.6%. Calibration is unseen data like validation,
+  the three months after training, so I expect it to behave like validation,
+  not like the training rows.
+- **The conformal step will widen the bound by a little: `q_hat` positive,
+  around 1 minute, under 2.** It only has to catch the extra ~1.5% of delays
+  just above the predicted bound, and delays are whole minutes, so a small
+  shift covers them. A `q_hat` of several minutes would mean calibration
+  differs from validation more than I think.
+- **The no-model bound will be about 14 minutes**, the population's 90th
+  percentile. Most delays should get a tighter bound from the model,
+  because the delay code separates routine stops from long incidents.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
