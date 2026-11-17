@@ -180,3 +180,26 @@ MIN_CATEGORY_ROWS = 30
 
 # Fitted models are written here. Ignored by git: they are rebuilt by script.
 MODELS_DIR = PROJECT_ROOT / "models"
+
+# ---------------------------------------------------------------------------
+# Day 3: the conformal step
+# ---------------------------------------------------------------------------
+# Which conformity score turns Day 2's model into intervals. Decided BEFORE
+# running anything, for the same reason as Day 2's selection rule: so the
+# choice cannot drift toward whichever result looks best.
+#
+#   "upper"      score = actual - predicted 90th percentile, in minutes.
+#                Interval: 1 minute up to (predicted q90 + q_hat).
+#                "90% chance it clears within X minutes."
+#   "two_sided"  score = |log1p(actual) - log1p(predicted median)|.
+#                Interval: the predicted median stretched both ways.
+#
+# Changing this after 12_test_once.py has run would mean measuring the test
+# set twice. Do not.
+CONFORMAL_SCORE = "upper"
+
+# What Day 3 writes. The two JSON files are small results and are committed.
+# The per-row test file feeds Day 4's audit and is rebuilt by script.
+DAY3_CALIBRATION = DOCS_DIR / "day3_calibration.json"
+DAY3_TEST_RESULTS = DOCS_DIR / "day3_test_results.json"
+DAY3_TEST_ROWS = PROCESSED_DIR / "day3_test_rows.parquet"
