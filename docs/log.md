@@ -452,6 +452,40 @@ of 20,000 made-up worlds whose coverage matched k / (n + 1) = 91/101.
   percentile. Most delays should get a tighter bound from the model,
   because the delay code separates routine stops from long incidents.
 
+### Calibration (Step 5, `11_calibrate.py`)
+
+The self-test passed. The model loaded as `3 gradient boosting` fitted on
+19,804 rows, against 6,563 calibration rows (2025-04-01 to 2025-12-31).
+
+- **Before conformal:** the model's own q90 covered **89.8%** of calibration
+  delays (validation gave 88.5%).
+- **`n` = 6,563, `k` = 5,908**, level 0.9002. **`q_hat` = 0.0835 minutes**:
+  conformal raises every predicted q90 by under a tenth of a minute.
+  Sections 3 and 4 agree: coverage slightly under 90%, correction positive.
+- **Rehearsal:** random halves 90.2% (range 88.9% to 90.8% over 20 seeds).
+  Temporal halves 91.8%, above the random range, so later calibration
+  delays were a little easier to cover than earlier ones. A mild drift of
+  about 1.5 points, from one split.
+- **Width:** typical upper bound 11.6 minutes (mean 13.2, largest 143)
+  against 14 minutes for a bound that ignores the model. 65% of delays get
+  a tighter bound than that.
+
+**Against my prediction.** The raw coverage came out at 89.8%, just above my
+87.5% to 89.5% range. `q_hat` was positive and small as I expected, but
+0.08 minutes, not about 1. The no-model bound was 14, as predicted. My guess
+is that validation's 88.5% was partly noise on 2,523 rows; I have not tested
+that. `q_hat` uses all 6,563 rows whatever the rehearsal showed, and nothing
+was changed because of it.
+
+### Prediction for the test set (written 16 November, before the test measurement)
+
+I expect test coverage of about **90.5%**, within 89% to 92%. If 2026
+looked like 2025 it would land in 89.0% to 91.0%. The temporal rehearsal
+gave 91.8%, so I lean above 90%: later delays were a bit easier to cover.
+But that is one split on calibration data, and the test set sits 9 months
+after the training period ends, so drift could go the other way. A result
+below 89% would mean 2026 delays ran longer than 2025 predicted.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
