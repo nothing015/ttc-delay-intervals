@@ -191,9 +191,6 @@ by anything.
 
 ### Read
 
-> FILL IN — one line each, only what you actually read: what it was, and the
-> one thing you took from it.
-
 - Pinball loss:
 - Quantile regression (introduction):
 - scikit-learn `HistGradientBoostingRegressor` page (quantile loss,
@@ -352,16 +349,94 @@ interactions, such as "this code at night", worth learning.
 **Nothing broke today.** Every count matched Day 1 on the first run, after
 Day 1 needed three attempts at its own acceptance test.
 
-### Prediction for Day 3
+## Day 3 — 16 November 2026
 
-> FILL IN — written before any conformal code. Boosting's own 90th
-> percentile covered 88.5% of validation delays. What do you expect it to
-> cover on the calibration slice before any correction, and will the
-> conformal step widen the bound by a little or a lot? Commit to a number.
+Goal for the day: turn Day 2's saved model into 90% prediction intervals
+with split conformal prediction, calibrate on the calibration slice, and
+measure coverage on the test set exactly once.
+
+### Read
+- Angelopoulos and Bates, split conformal procedure: the new score is
+  equally likely to land in any of the n + 1 positions among the calibration
+  scores, so taking the k-th smallest with k = ceil((n + 1) × 0.9) gives at
+  least 90% coverage; using n would undercover slightly.
+- Same paper, conformalized quantile regression: start from a model that
+  already predicts quantiles and use calibration only to correct how far
+  they miss, so the interval keeps the model's adaptive width. My `"upper"`
+  score is the one-sided version.
+- My Day 1 journal, section 2: today measures marginal coverage only, and
+  relies on 2025 and 2026 being exchangeable, which holds only approximately.
+
+
+### Conformity score (Step 1, chosen before any code ran)
+
+**Correction to the plan: not absolute residuals in minutes.** The plan said
+plain split conformal on absolute residuals would be enough. That gives the
+prediction plus or minus one fixed number of minutes. My delays are heavily
+skewed (median 5, 90th percentile 14, maximum 716), so a symmetric interval
+is the wrong shape: its lower end falls below 1 minute, which no delay in my
+population can be, and it gives a five-minute delay and an hour-long
+shutdown the same width.
+
+**Chosen: `CONFORMAL_SCORE = "upper"`.** The score is the actual delay minus
+the model's predicted 90th percentile, in minutes. The interval runs from
+1 minute up to the predicted 90th percentile plus `q_hat`, and reads as
+"90% chance it clears within X minutes". I chose it because the project's
+question is how long until a delay clears, which is an upper bound, and
+because Day 2 showed the model helps most at the 90th percentile (21.2%
+below the floor, against 6.8% for the median). The bound is built on the
+part of the model that works best. Fixing the lower end at 1 minute costs
+nothing, since every delay in the population is at least 1 minute.
+
+The alternative, `"two_sided"` (log-scale distance from the predicted
+median), carries the same guarantee with a different shape. I fixed the
+choice before running anything, for the same reason the Day 2 selection
+rule was fixed first: so it cannot drift toward whichever result looks best.
+
+### Settings (Step 2)
+
+Added the Day 3 block to the end of `src/config.py`: `CONFORMAL_SCORE =
+"upper"` and the three output paths (`DAY3_CALIBRATION`,
+`DAY3_TEST_RESULTS`, `DAY3_TEST_ROWS`). The score lives in `config.py`, as
+the split dates do, so no script can quietly use a different one.
+Checked: `config.CONFORMAL_SCORE` prints `upper`, and `07_verify.py` still
+passes all 31 checks, so the edit did not disturb Day 1.
+
+### Scripts (Step 3)
+
+Copied the four Day 3 scripts into `src/`: `conformal.py` (the method),
+`11_calibrate.py` (computes `q_hat` from calibration, never reads a test
+delay), `12_test_once.py` (measures the test set once, then refuses to run
+again) and `13_plot.py` (draws the figure from saved results). Nothing has
+been run yet. 
+
+### Conformal method, by hand (Step 4)
+
+Before running anything I worked three cases on paper.
+
+- Nine scores, 1 to 9: n + 1 = 10, 10 × 0.9 = 9, so k = 9 and `q_hat` is the
+  9th smallest, which is 9. A new score lands in one of 10 positions and is
+  covered in 9 of them: 9/10. I first wrote 9 out of 9, which forgets that
+  the new score takes a position in the line too.
+- Nineteen scores, 1 to 19: n + 1 = 20, 20 × 0.9 = 18, so k = 18 and
+  `q_hat` = 18. Chance of coverage 18/20.
+- Five scores, 1 to 5: (5 + 1) × 0.9 = 5.4, so k = 6, more than the 5 scores
+  I have. Using the biggest score would cover only 5/6 = 83%, so no finite
+  bound can promise 90% and the honest `q_hat` is infinite. This never
+  happens with my 6,563 calibration rows (k = 5,908).
+
+**Why n + 1.** I line up the n calibration scores and the one new score.
+If the rows are exchangeable, the new score is equally likely to land in any
+of the n + 1 positions. It is covered when it lands in the bottom k, so the
+chance is k / (n + 1), and k = ceil((n + 1) × 0.9) makes that at least 0.9.
+Using n instead would undercover: with n = 10, k = 9 gives 9/11 = 82%. The
+argument never uses the model, only that the rows are exchangeable. That is
+why a worse model gives wider intervals, not invalid ones.
+
+Self-test (`conformal.py`): all four checks passed, including a simulation
+of 20,000 made-up worlds whose coverage matched k / (n + 1) = 91/101.
 
 ### AI assistance
-
-> EDIT — check every sentence is true before this goes anywhere public.
 
 Claude (Anthropic) was used throughout.
 
