@@ -708,6 +708,85 @@ lower still.
   but with 232 test delays its adjusted interval is too wide to flag.
 - **Day 1's `MUPR1` prediction cannot be tested** (Step 5).
 
+### Coverage audit (Step 8, `16_audit.py`, run once)
+
+Ran once on 17 November at 16:31, on the 7,448 test delays in Day 3's
+per-row file. No model loaded, nothing re-measured. 12 flaggable groups,
+adjusted z = 2.87. All three self-tests passed.
+
+**No group undercovers 90% under the rule fixed in advance, and none is
+marked "possible".** This is the negative result Day 1 said I would report.
+
+| Grouping | Group | n | Coverage | 95% CI | Adjusted CI | deff |
+|---|---|---|---|---|---|---|
+| line | YU | 3,977 | 93.1% | 92.2–93.9 | 91.8–94.3 | 1.2 |
+| line | BD | 3,167 | 90.7% | 89.5–91.9 | 88.9–92.5 | 1.5 |
+| line | SHP | 304 | 93.1% | 90.3–95.9 | 89.0–97.2 | 1.0 |
+| hour band | overnight 00–04 | 505 | 89.9% | 87.0–92.8 | 85.6–94.2 | 1.2 |
+| hour band | early 05–06 | 646 | 91.3% | 88.7–94.0 | 87.4–95.2 | 1.5 |
+| hour band | AM peak 07–09 | 1,194 | 93.3% | 91.8–94.8 | 91.1–95.5 | 1.1 |
+| hour band | midday 10–15 | 2,087 | 93.1% | 91.9–94.3 | 91.3–94.9 | 1.2 |
+| hour band | PM peak 16–18 | 1,347 | 91.0% | 89.3–92.7 | 88.5–93.5 | 1.3 |
+| hour band | evening 19–23 | 1,669 | 91.7% | 90.2–93.1 | 89.5–93.8 | 1.2 |
+| code tier | median <= 5 min | 5,373 | 92.8% | 92.0–93.5 | 91.7–93.9 | 1.2 |
+| code tier | median > 5 min | 1,528 | 89.6% | 87.9–91.3 | 87.0–92.1 | 1.3 |
+| code tier | rare or new code | 547 | 92.0% | 88.5–95.4 | 86.9–97.0 | 2.3 |
+
+Spread (highest minus lowest coverage): line 2.4 points, hour band 3.4,
+code tier 3.2.
+
+**Reading it.**
+
+- **Two groups sit just below 90%, but neither interval excludes 90%:** the
+  "> 5 min" code tier (89.6%) and overnight (89.9%). They are the same two
+  groups one global `q_hat` left low on calibration (87.6% and 88.4% under
+  random halves), so the pattern repeats across 2025 and 2026. At this
+  sample size it is a pattern, not a finding. On calibration, Mondrian
+  lifted both to about 90% for 3.7 and 1.9 extra minutes of median bound.
+- **Read against 92.1%, not just 90%:** BD (90.7%) sits 2.4 points below YU
+  (93.1%), though the two were level on calibration (90.2% and 90.1%). BD
+  gained less from the 2026 shift. I can describe this, not explain it.
+- **Power.** The adjusted intervals run about ±1 to ±3 points for the large
+  groups and ±4 to ±5 for the small ones. The audit rules out large
+  undercoverage (below about 87% in the bigger groups); it cannot rule out
+  a shortfall of a point or two.
+- **Design effects** are 1.0 to 1.5, except rare or new code at 2.3: its
+  misses cluster on particular days. That group is also a bigger share of
+  test (547, 7.3%) than of calibration (362, 5.5%), so 2026 brought more
+  codes the model never learned.
+
+**Against my prediction.**
+
+| Predicted | Got | |
+|---|---|---|
+| No group flagged | none flagged, none "possible" | right |
+| Lowest group: > 5 min, about 90% (88.5–91.5) | 89.6% | right |
+| Lowest hour bands: early and overnight, 90–91% | overnight 89.9% lowest; then PM peak 91.0%, early 91.3% | half right |
+| Rare or new code above overall, about 93% | 92.0%, level with overall | wrong, narrowly |
+| SHP hard to call | 93.1% | — |
+| Day 1: hour band a weak grouping | largest spread of the three (3.4 points) | not supported, though the merge diluted the code tier |
+| Day 2: rare or new code undercovers first | 92.0% | not supported |
+| Day 1: `MUPR1` undercovers | not testable (Step 5) | — |
+
+**A correction to my earlier entries.** Two numbers in my Read line and my
+Step 7 prediction came from Claude's stand-in data, not mine. SHP has 304
+test delays (4.1%), not 232 (about 3%). With 4.1%, the rest would need
+about 92.6% for the overall figure to read 92.1%, so the conclusion is
+unchanged. I left the committed text as written and correct it here.
+
+Nothing was changed after seeing this result. Mondrian stays on
+calibration.
+
+### Figure (Step 9, `17_plot_groups.py`)
+
+Drew `docs/figures/day4_group_coverage.png` from the saved audit: one panel
+per grouping, a dot for coverage, a thick bar for the 95% interval and a
+thin bar for the adjusted interval the flag uses. Every thin bar crosses
+the 90% line, matching the table. The "> 5 min" tier and overnight sit
+just left of 90%, BD sits below YU, and every group spreads around the
+92.1% overall, by up to 3.4 points within a grouping. The figure reads the
+saved audit only and adds no new look at the test set.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
