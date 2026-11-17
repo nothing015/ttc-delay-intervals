@@ -203,3 +203,26 @@ CONFORMAL_SCORE = "upper"
 DAY3_CALIBRATION = DOCS_DIR / "day3_calibration.json"
 DAY3_TEST_RESULTS = DOCS_DIR / "day3_test_results.json"
 DAY3_TEST_ROWS = PROCESSED_DIR / "day3_test_rows.parquet"
+
+# ---------------------------------------------------------------------------
+# Day 4: the coverage audit
+# ---------------------------------------------------------------------------
+# The groupings fixed on Day 1. "code_tier" groups delay codes by their
+# median delay over the training rows, cut at CODE_TIER_CUTOFFS minutes;
+# codes the model pools into OTHER form one more group. Fixed BEFORE the
+# audit runs, so the groups cannot be redrawn around whatever undercovers.
+AUDIT_GROUPINGS = ("line", "hour_band", "code_tier")
+CODE_TIER_CUTOFFS = (5, 10, 20)
+
+# Intervals on group coverage resample whole days of the test period (delays
+# on the same day are not independent). Seeded so a re-run gives the same
+# numbers.
+AUDIT_BOOTSTRAP_REPS = 2000
+AUDIT_SEED = 0
+
+# What Day 4 writes. The groups and the Mondrian rehearsal are re-runnable;
+# the audit file is the lock that stops the groups being changed afterwards.
+DAY4_GROUPS = DOCS_DIR / "day4_groups.json"
+DAY4_MONDRIAN = DOCS_DIR / "day4_mondrian.json"
+DAY4_AUDIT = DOCS_DIR / "day4_audit.json"
+DAY4_AUDIT_TABLE = DOCS_DIR / "day4_audit.csv"

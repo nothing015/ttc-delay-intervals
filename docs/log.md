@@ -530,6 +530,69 @@ tail: the model's bound was too generous at every level. The ten points come
 from the same 7,448 delays, so they are one finding, not ten. The figure
 adds no new look at the test set. Marginal coverage only.
 
+## Day 4 — 17 November 2026
+
+Goal for the day: test coverage inside each line, hour band and delay-code
+tier, each with an interval and a verdict under a rule fixed before the run.
+Check, on calibration rows only, whether Mondrian conformal would fix a group
+that misses. Nothing measures the test set again: the audit slices the
+per-row file Day 3 saved.
+
+### Read
+
+- Angelopoulos and Bates, group-balanced conformal prediction: Mondrian runs
+  the Day 3 recipe inside each group, so each group gets its own `q_hat`
+  and its own 90% guarantee. A group the global bound undercovers gets a
+  bigger `q_hat` and a wider bound; one it overcovers gets a tighter one.
+  The cost is that a small group's `q_hat` comes from few rows, so it is
+  noisy.
+- My Day 1 journal, section 2: the 90% is marginal, a weighted average over
+  every delay. A small group can collapse without the overall number
+  noticing: if SHP (about 3% of test delays) fell to 80%, the rest would
+  only need to average about 92.5% for the overall figure to still read
+  92.1%, a shift smaller than its own confidence interval.
+- Multiple comparisons and the Bonferroni correction:
+
+### Audit design (Step 1, fixed before any code ran)
+
+**Correction to the plan: Mondrian is not applied to the test set.** The
+Day 3 runbook said Day 4 would apply Mondrian conformal if groups
+undercovered. If I chose Mondrian after seeing which test groups miss and
+then scored it on test, I would be tuning the method to the test set
+(rule 2). So I fit and check Mondrian on calibration halves only, and the
+write-up reports what it would do. A clean test of it needs delays the
+project has never seen, such as months published after September 2026.
+
+I fixed six decisions before any Day 4 code ran:
+
+| Decision | Setting | Why |
+|---|---|---|
+| Groupings | line, hour band, delay-code tier | Fixed on Day 1. Not station: only 21 of 277 stations reach 100 calibration rows. |
+| Code tier | each code's median delay over the 19,804 training rows, cut at 5, 10 and 20 minutes; codes the model pools into `OTHER` form "rare or new code" | One group per code is too thin, and a prefix grouping (MU, SU, PU) would bury `MUPR1` among routine codes. Grouping by typical length tests my Day 1 prediction directly, and because it comes from training rows, coverage cannot leak into it. |
+| Thin tiers | a tier under 100 calibration rows merges with its smaller neighbour; "rare or new code" is never merged, and if thin it is shown but not flagged | `MIN_ROWS_PER_GROUP`. Counting calibration rows says nothing about coverage. |
+| Intervals | resample whole days of the test period, 2,000 times, seed 0; normal interval around the bootstrap standard error; design effect reported | One bad day produces many long delays together, so rows are not independent. |
+| Flag rule | a group undercovers if its Bonferroni-adjusted interval (family-wise 95%) lies entirely below 90%; "possible" if only the ordinary 95% interval does | With about 14 groups tested at 95% each, something flags by chance about half the time. |
+| Mondrian | fitted and checked on calibration halves only | The correction above. |
+
+The cutoffs come from Day 1: the overall median is 5 minutes, the 90th
+percentile 14, and the long codes run well past 20 (`MUPLB` 25, `MUPR1`
+72.5). They are my choice, written down before seeing any group's coverage.
+I expect the tier above 20 minutes to be thin: `MUPR1` has 110 delayed rows
+over 45 months, so perhaps 20 fall in the nine calibration months. If that
+tier merges into the one below, that is the rule working.
+
+### Settings (Step 2)
+
+Added the Day 4 block to the end of `src/config.py`: `AUDIT_GROUPINGS`,
+`CODE_TIER_CUTOFFS = (5, 10, 20)`, `AUDIT_BOOTSTRAP_REPS = 2000`,
+`AUDIT_SEED = 0`, and the four output paths (`DAY4_GROUPS`,
+`DAY4_MONDRIAN`, `DAY4_AUDIT`, `DAY4_AUDIT_TABLE`). The groupings and
+cutoffs live in `config.py` with the split dates and the score, so no
+script can quietly use different ones. Checked: `config` prints
+`('line', 'hour_band', 'code_tier') (5, 10, 20) day4_audit.json`, and
+`07_verify.py` still passes all 31 checks, so the edit did not disturb
+Day 1.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
