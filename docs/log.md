@@ -593,6 +593,19 @@ script can quietly use different ones. Checked: `config` prints
 `07_verify.py` still passes all 31 checks, so the edit did not disturb
 Day 1.
 
+### Scripts (Step 3)
+
+Copied the seven Day 4 scripts into `src/`: three modules with self-tests
+(`groups.py`, `coverage_stats.py`, `mondrian.py`) and four scripts
+(`14_define_groups.py`, `15_mondrian.py`, `16_audit.py`,
+`17_plot_groups.py`). Before I ran anything, they were checked against my
+real schema on a stand-in, with warnings as errors, and I confirmed that
+the keys and column types they read are in my Day 3 files. That check found
+one fix: `15_mondrian.py` now converts predictions to plain arrays, so the
+calibration halves are picked by position even if the model returns pandas
+Series. Committed with the design and settings in `f572385`, before any
+group was looked at.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
