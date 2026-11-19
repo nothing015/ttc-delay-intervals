@@ -858,6 +858,23 @@ so the committed `q_hat` belongs to it. Two transitive packages installed
 newer in the clone (narwhals 2.29.0, cloudpickle 3.1.3) without changing
 the answer.
 
+
+### Project page and going public (Steps 6 and 7)
+
+Added `src/19_export_page.py` and `docs/index.html`, both written by Claude.
+Every feature the model uses is categorical, so the export asks the final
+model for every combination and stores each 90% bound in hundredths of a
+minute: `docs/site/bounds.bin`, 1,228,500 bytes, 614,250 answers. It writes
+nothing unless the table gives the endpoint's answer for the README example.
+The page looks answers up in the browser with no server, and shows both
+figures and the locked Day 4 audit. It reads no test row and offers no new
+way to slice the test set, so I dropped the free coverage explorer I had
+considered: it would have let anyone do the slicing the Day 4 lock exists to
+prevent. Committed in `03872ba`.
+
+`git log --all --oneline -- .env .vscode` printed nothing. The repo is
+public, and the page is published with GitHub Pages from `/docs`.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.

@@ -4,6 +4,7 @@
 Measured once on 7,448 delays from January to September 2026, the intervals covered **92.1%** (95% CI 91.4% to 92.7%) against a 90% target.
 No line, hour band or delay-code tier is shown to undercover at this power. The guarantee is marginal, and 2025 and 2026 were not exchangeable: 2026 delays ran shorter.
 
+**Try it in a browser:** [nothing015.github.io/ttc-delay-intervals](https://nothing015.github.io/ttc-delay-intervals/), nothing to install.  
 **Read the write-up:** [docs/writeup.pdf](docs/writeup.pdf) (4 pages) or [docs/writeup.md](docs/writeup.md).
 
 Japan's railways are famous for running to the minute, which fascinates me.
@@ -117,6 +118,7 @@ committed in `docs/`.
 | `16_audit.py` | Coverage inside each group, from Day 3's saved rows; runs once |
 | `17_plot_groups.py` | The Day 4 group figure, from the saved audit |
 | `18_serve.py` | The interval as JSON, from the command line or a local server |
+| `19_export_page.py` | Every answer the model can give, as a table for the browser page (`docs/index.html`); checked against `18_serve.py` before writing |
 | `rebuild.py` | Download, build, verify, refit, one example |
 
 Shared code, not run directly: `config.py` (every setting, including the
