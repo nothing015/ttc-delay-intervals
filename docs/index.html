@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How long until a TTC subway delay clears?</title>
+<meta name="description" content="90% upper bounds on TTC subway delay length, with a coverage guarantee checked on 7,448 delays from 2026.">
+<style>
+  :root {
+    --ink: #1b1d21; --muted: #5d636e; --line: #e2e4e8; --bg: #fafaf8; --card: #ffffff;
+    --accent: #2a6fdb; --accent-soft: #e8f0fc; --ok: #2e7d4f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 40px 20px 64px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; margin: 44px 0 10px; }
+  p { margin: 0 0 12px; }
+  .lead { font-size: 18px; color: #33373e; }
+  .links { margin: 14px 0 0; display: flex; gap: 10px; flex-wrap: wrap; }
+  .links a { color: var(--accent); text-decoration: none; border: 1px solid var(--line);
+             padding: 6px 12px; border-radius: 6px; background: var(--card); font-size: 15px; }
+  .links a:hover { border-color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; margin-top: 24px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  select, input { width: 100%; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #cdd1d7;
+                  border-radius: 6px; background: #fff; color: var(--ink); }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .when { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+  .examples { margin-top: 14px; font-size: 14px; color: var(--muted); }
+  .examples button { font: inherit; font-size: 14px; color: var(--accent); background: var(--accent-soft);
+                     border: 0; border-radius: 999px; padding: 4px 12px; margin: 4px 6px 0 0; cursor: pointer; }
+  .answer { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .big { font-size: 40px; font-weight: 700; line-height: 1.1; color: var(--accent); }
+  .big small { font-size: 18px; font-weight: 600; color: var(--ink); }
+  .reads { font-size: 17px; margin: 6px 0 10px; }
+  .saw { font-size: 14px; color: var(--muted); }
+  .context { font-size: 14px; margin-top: 10px; padding: 10px 12px; background: #f4f6f8; border-radius: 6px; }
+  .note { font-size: 14px; color: var(--muted); }
+  figure { margin: 18px 0; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.grp { color: var(--muted); }
+  .verdict { color: var(--ok); font-weight: 600; }
+  ul { padding-left: 20px; } li { margin-bottom: 6px; }
+  footer { margin-top: 48px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+  .error { color: #a3261c; }
+  @media (max-width: 600px) { .form { grid-template-columns: 1fr; } h1 { font-size: 25px; } .big { font-size: 34px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>How long until a TTC subway delay clears?</h1>
+  <p class="lead">A 90% upper bound on how long a logged Toronto subway delay lasts, with the coverage guarantee
+    checked on delays the model never saw. On <span id="n-test">7,448</span> delays from January to September 2026,
+    measured once, the bounds covered <strong id="cov">92.1%</strong> against a 90% target.</p>
+  <div class="links">
+    <a href="writeup.pdf">Write-up (PDF, 4 pages)</a>
+    <a href="https://github.com/nothing015/ttc-delay-intervals">Code on GitHub</a>
+  </div>
+
+  <section class="card" aria-labelledby="try">
+    <h2 id="try" style="margin-top:0">Try it</h2>
+    <div class="form">
+      <div><label for="line">Line</label><select id="line"></select></div>
+      <div><label for="station">Station</label><select id="station"></select></div>
+      <div><label for="code">TTC delay code</label><select id="code"></select></div>
+      <div><label for="date">When the delay started</label>
+        <div class="when"><input id="date" type="date" value="2026-03-04"><input id="time" type="time" value="08:15"></div>
+      </div>
+    </div>
+    <div class="examples">Examples:
+      <button type="button" data-ex="YU|UNION STATION|SUDP|2026-03-04|08:15">routine code, Union, weekday morning</button>
+      <button type="button" data-ex="BD|KENNEDY BD STATION|MUPR1|2026-03-07|02:30">long code, Kennedy, Saturday 02:30</button>
+    </div>
+    <div class="answer" aria-live="polite">
+      <div class="big" id="bound">…</div>
+      <p class="reads" id="reads">Loading the model's answers…</p>
+      <p class="saw" id="saw"></p>
+      <div class="context" id="context" hidden></div>
+    </div>
+    <p class="note" style="margin-top:14px">Retrospective, not a rider tool: the delay code is assigned by TTC staff
+      after a delay starts. The 90% is an average over all delays, not a promise for any single one.</p>
+  </section>
+
+  <h2>Does the 90% hold?</h2>
+  <p>Overall, yes, with room to spare. The bound covered <span id="cov2">92.1%</span> of 2026 test delays
+    (95% CI <span id="ci">91.4% to 92.7%</span>). That is above the <span id="exp">89.0% to 91.0%</span> that
+    exchangeable data would give: 2026 delays ran shorter than 2025's, so the bounds were wider than they needed to be.</p>
+  <figure>
+    <img src="figures/day3_coverage.png" alt="Measured test coverage against the coverage asked for, at ten levels from 50% to 95%; every level overcovers.">
+    <figcaption>Coverage measured on the test set against coverage asked for. Every level overcovers, by 3 to 4 points in the middle.</figcaption>
+  </figure>
+
+  <h2>Does it hold inside groups?</h2>
+  <p>The guarantee is marginal, so I checked 12 groups fixed before looking. A group counts as undercovering only if its
+    Bonferroni-adjusted interval lies wholly below 90%. <strong>None does.</strong> The audit can rule out large
+    shortfalls, not one of a point or two.</p>
+  <table id="audit"><thead><tr><th>Group</th><th></th><th class="num">Delays</th><th class="num">Coverage</th><th class="num">Adjusted interval</th><th>Verdict</th></tr></thead><tbody></tbody></table>
+  <figure>
+    <img src="figures/day4_group_coverage.png" alt="Coverage inside each line, hour band and delay-code tier, with 95% and adjusted intervals; every adjusted interval crosses 90%.">
+    <figcaption>Thick bar: 95% interval. Thin bar: the adjusted interval the rule uses. Every thin bar crosses 90%.</figcaption>
+  </figure>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>A gradient-boosting model predicts each delay's 90th percentile from line, hour band, day of week, station and delay code, trained on 2023 to early-2025 delays.</li>
+    <li>Split conformal prediction measures how far that percentile misses on 6,563 held-out 2025 delays and raises every bound by the amount that makes 90% hold: <span id="qhat">0.0835</span> minutes.</li>
+    <li>The test set was measured once, and the groups and the rule for the audit were committed before it ran.</li>
+    <li>This page answers from a table of every answer the model can give, so it needs no server. It matches the project's JSON endpoint to the hundredth of a minute.</li>
+  </ul>
+
+  <footer>
+    Data: <a href="https://open.toronto.ca/dataset/ttc-subway-delay-data/">TTC Subway Delay Data</a>, City of Toronto,
+    Open Government Licence – Toronto. 33,815 delays of at least one minute on Lines 1, 2 and 4, January 2023 to September 2026.
+    Built by Nuaiman Hasan with help from Claude (Anthropic); who did what is in the project log.
+  </footer>
+</main>
+
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const LINE_NAMES = { YU: "Line 1 Yonge-University (YU)", BD: "Line 2 Bloor-Danforth (BD)", SHP: "Line 4 Sheppard (SHP)" };
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const pct = (x) => (100 * x).toFixed(1) + "%";
+  const title = (s) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+  let meta, view;
+  try {
+    const [m, b] = await Promise.all([fetch("site/meta.json"), fetch("site/bounds.bin")]);
+    if (!m.ok || !b.ok) throw new Error("missing files");
+    meta = await m.json();
+    view = new DataView(await b.arrayBuffer());
+  } catch (e) {
+    $("bound").textContent = "";
+    $("reads").innerHTML = '<span class="error">Could not load the model’s answers. Open this page through GitHub Pages, or run <code>python -m http.server</code> in the docs folder.</span>';
+    return;
+  }
+
+  const cats = meta.categories;
+  const sizes = meta.axes.map((a) => cats[a].length);
+  const t = meta.test;
+  $("n-test").textContent = t.n_test.toLocaleString("en-CA");
+  $("cov").textContent = $("cov2").textContent = pct(t.coverage);
+  $("ci").textContent = pct(t.coverage_ci_low) + " to " + pct(t.coverage_ci_high);
+  $("exp").textContent = pct(t.expected_low) + " to " + pct(t.expected_high);
+  $("qhat").textContent = meta.q_hat.toFixed(4);
+
+  // The locked Day 4 audit, as committed.
+  const NAMES = { line: "Line", hour_band: "Hour band", code_tier: "Code tier" };
+  let last = "";
+  $("audit").tBodies[0].innerHTML = meta.audit.map((r) => {
+    const g = r.grouping === last ? "" : NAMES[r.grouping] || r.grouping; last = r.grouping;
+    const verdict = r.flag === "ok" ? '<span class="verdict">holds</span>' : r.flag;
+    return `<tr><td class="grp">${g}</td><td>${r.group}</td><td class="num">${r.n.toLocaleString("en-CA")}</td>` +
+           `<td class="num">${pct(r.coverage)}</td><td class="num">${pct(r.ci_adj_low)} – ${pct(r.ci_adj_high)}</td><td>${verdict}</td></tr>`;
+  }).join("");
+
+  // Form options. Stations are the ones seen on each line in training rows.
+  $("line").innerHTML = cats.line.map((l) => `<option value="${l}">${LINE_NAMES[l] || l}</option>`).join("");
+  const codes = cats.code_grp.filter((c) => c !== "OTHER");
+  $("code").innerHTML = codes.map((c) => {
+    const d = meta.code_descriptions[c];
+    return `<option value="${c}">${c}${d ? " — " + d : ""}</option>`;
+  }).join("") + '<option value="OTHER">A rare or new code</option>';
+
+  function fillStations(keep) {
+    const list = meta.stations_by_line[$("line").value] || [];
+    $("station").innerHTML = list.map((s) => `<option value="${s}">${title(s)}</option>`).join("") +
+      '<option value="OTHER">Another station</option>';
+    if (keep && [...$("station").options].some((o) => o.value === keep)) $("station").value = keep;
+  }
+
+  function bandOf(hour) {
+    for (const [name, [lo, hi]] of Object.entries(meta.hour_bands)) if (hour >= lo && hour <= hi) return name;
+    return null;
+  }
+
+  function update() {
+    const [y, mo, d] = $("date").value.split("-").map(Number);
+    const hour = Number(($("time").value || "").split(":")[0]);
+    if (!y || !mo || !d || Number.isNaN(hour)) { $("bound").textContent = ""; $("reads").textContent = "Pick a date and time."; return; }
+    const dow = (new Date(Date.UTC(y, mo - 1, d)).getUTCDay() + 6) % 7; // Monday = 0, as in the data
+    const band = bandOf(hour);
+    const key = [$("line").value, band, String(dow), $("code").value, $("station").value];
+    let idx = 0;
+    for (let i = 0; i < key.length; i++) {
+      const pos = cats[meta.axes[i]].indexOf(key[i]);
+      if (pos < 0) { $("reads").textContent = "That combination is outside the model."; return; }
+      idx = idx * sizes[i] + pos;
+    }
+    const upper = view.getUint16(idx * 2, true) / meta.scale;
+    $("bound").innerHTML = `${upper.toFixed(1)} <small>minutes</small>`;
+    $("reads").textContent = `90% chance the delay clears within ${upper.toFixed(1)} minutes.`;
+    $("saw").textContent = `The model saw: ${band}, ${DAYS[dow]}, ` +
+      ($("station").value === "OTHER" ? "a pooled station, " : "") +
+      ($("code").value === "OTHER" ? "a pooled rare code." : `code ${$("code").value}.`);
+
+    const find = (g, name) => meta.audit.find((r) => r.grouping === g && r.group === name);
+    const parts = [find("line", key[0]), find("hour_band", band)].filter(Boolean)
+      .map((r) => `${r.group}: ${pct(r.coverage)} of ${r.n.toLocaleString("en-CA")} delays`);
+    $("context").hidden = parts.length === 0;
+    $("context").textContent = "How often the bound held in 2026 for delays like this one — " + parts.join("; ") + ".";
+  }
+
+  function setExample(spec) {
+    const [l, s, c, dt, tm] = spec.split("|");
+    $("line").value = l; fillStations(s);
+    $("code").value = [...$("code").options].some((o) => o.value === c) ? c : "OTHER";
+    $("date").value = dt; $("time").value = tm; update();
+  }
+
+  $("line").addEventListener("change", () => { fillStations($("station").value); update(); });
+  ["station", "code", "date", "time"].forEach((id) => $(id).addEventListener("input", update));
+  document.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => setExample(b.dataset.ex)));
+  setExample(document.querySelector("[data-ex]").dataset.ex);
+})();
+</script>
+</body>
+</html>

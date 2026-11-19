@@ -825,6 +825,39 @@ the lowest test coverage among lines and hour bands (BD 90.7%, overnight
 Server mode: `curl.exe` returned the same JSON as the command line, and the
 server logged `200` for each request.
 
+### Rebuild from a fresh clone (Step 5)
+
+**Data window pinned.** `END_DATE` was `None` ("everything available"), so
+anyone downloading after October would get rows I never measured, and their
+counts would differ from mine. The build keeps `event_time <= END_DATE`, so
+the pin is `"2026-09-30 23:59:59"`; my latest row is 23:59:00. Rebuilt: the
+new `after end date` stage removed 0 rows, 97,136 rows written, all 31
+checks passed. It changes no result; it fixes the data the results were
+measured on.
+
+**Requirements pinned.** Listing every import showed two packages my code
+uses directly that the old `requirements.txt` never named: `scipy`
+(`coverage_stats.py`) and `joblib`. They only worked because scikit-learn
+installs them. The new file pins all nine direct dependencies to my
+`pip freeze` versions, on Python 3.14.3. `pip install -r requirements.txt`
+in my own environment changed nothing.
+
+**Fresh clone.** Cloned from GitHub into a temp folder, new `.venv`,
+`pip install -r requirements.txt`, then `python rebuild.py`:
+
+| | My repo | Fresh clone |
+|---|---|---|
+| Rows in Parquet | 97,136 | 97,136 |
+| Acceptance test | 31 passed | 31 passed |
+| Final model training rows | 19,804 | 19,804 |
+| In-sample share below q90 | 90.6% | 90.6% |
+| Example upper bound (YU, UNION, SUDP) | 9.69 min | 9.69 min |
+
+The same model q90 (9.609) means the rebuilt model is the measured model,
+so the committed `q_hat` belongs to it. Two transitive packages installed
+newer in the clone (narwhals 2.29.0, cloudpickle 3.1.3) without changing
+the answer.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.

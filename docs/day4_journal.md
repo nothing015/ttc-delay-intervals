@@ -424,4 +424,4 @@ python src/17_plot_groups.py      # redraws the figure from the saved audit
 
 ## AI acknowledgement
 
-*(to be written by me)*
+Claude wrote all seven Day 4 scripts, including the `15_mondrian.py` array fix, and drafted this journal, the log entries and the audit prediction from my output; two numbers from its stand-in data (SHP 232, about 3%) reached my log and are corrected in the Step 8 entry. I ran every step, caught the outdated `15_mondrian.py` with a byte check, and committed the audit design before any group was looked at.

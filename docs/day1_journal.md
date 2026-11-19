@@ -449,4 +449,4 @@ the build is reproducible from the raw files.
 
 ## AI acknowledgement
 
-*(to be written by me)*
+Claude (Anthropic) helped me scope the project and drafted the download, build and exploration scripts; I studied the conformal method from Angelopoulos and Bates, ran every script myself, and corrected the analysis where its output contradicted what I had been told to expect (the Q8 spread calculation and the rush-hour hypothesis).

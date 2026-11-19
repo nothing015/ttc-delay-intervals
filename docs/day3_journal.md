@@ -443,4 +443,4 @@ python src/13_plot.py             # redraws the figure from saved results
 
 ## AI acknowledgement
 
-*(to be written by me)*
+Claude wrote the conformal code (`conformal.py`, `11_calibrate.py`, `12_test_once.py`, `13_plot.py`) and drafted this journal and my predictions from my output; before running any of it I learned what exchangeability means and worked the n + 1 hand cases on paper, mistakes included (section 5), so I can defend each step without the code.

@@ -356,4 +356,4 @@ python src/10_leakage.py                             # optional
 
 ## AI acknowledgement
 
-*(to be written by me)*
+Claude wrote this day's runbook and scripts (`data.py`, `08_baselines.py`, `09_fit_final.py`, `10_leakage.py`), tested them on stand-in data and drafted this journal from my output; I learned pinball loss and quantile regression, checked the proposed validation slice and selection rule against the project's rules before accepting them, and ran every step, matching each count to Day 1.
