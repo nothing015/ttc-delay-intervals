@@ -5,14 +5,6 @@
 Goal for the day: raw files in, one clean Parquet out, the prediction target
 written down. Nothing modelled.
 
-### Read
-
-- Angelopoulos and Bates, *A Gentle Introduction to Conformal Prediction*
-  (introduction and split-conformal section):
-- TTC dataset readme and delay-code key:
-- Open Government Licence – Toronto:
-- Leakage in time series (optional):
-
 ### Decisions
 
 **Date range: 2023-01-01 onward.** The TTC system changed substantially over
@@ -188,13 +180,6 @@ fixed width.
 Goal for the day: four baselines scored on held-out data, one chosen by a rule
 fixed in advance, and one saved model for Day 3. Calibration and test not used
 by anything.
-
-### Read
-
-- Pinball loss:
-- Quantile regression (introduction):
-- scikit-learn `HistGradientBoostingRegressor` page (quantile loss,
-  categorical features):
 
 ### Two corrections to the plan
 
@@ -499,7 +484,7 @@ calibration rows.
 - **Before conformal:** the model's own q90 covered 91.8%. Conformal added
   0.3 points.
 - **No-model bound:** one 14-minute upper bound for every delay covered
-  92.9%. The same bound covered 90% of 2025 calibration delays, so delays
+  92.9%. The same bound covered at least 90.0% of 2025 calibration delays, so delays
   themselves ran shorter in 2026, not only the model's errors.
 - **Width:** upper bound median 11.5 minutes, mean 13.1. 65% of delays got a
   tighter bound than the no-model one.
