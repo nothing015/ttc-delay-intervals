@@ -772,6 +772,59 @@ just left of 90%, BD sits below YU, and every group spreads around the
 92.1% overall, by up to 3.4 points within a grouping. The figure reads the
 saved audit only and adds no new look at the test set.
 
+## Day 5 — 17 and 18 November 2026
+
+Goal for the day: ship what a reviewer reads. The write-up, the README, a
+JSON endpoint, and a public repo a stranger can rebuild in two commands.
+Nothing is measured again.
+
+### Before starting
+
+`07_verify.py` passed all 31 checks. `12_test_once.py` printed the stored
+92.1% and refused to measure again; `16_audit.py` printed the stored audit
+(no group undercovers) and refused to run again. The working tree was clean
+at `8af606f`, the Day 4 journal commit.
+
+### Log corrections (Step 1)
+
+Changed the Day 3 Step 7 no-model sentence to "at least 90.0%", and removed
+the blank Read lines rather than fill them with sources I had not opened.
+These went into `ad803ae` with the write-up draft, not a commit of their own.
+
+### Write-up (Step 2)
+
+Claude drafted `docs/writeup.md` from my committed results, log and
+journals, and I committed it as drafted (`ad803ae`). Printed from GitHub it
+came to 8 pages: site chrome, browser headers and large type. Claude
+shortened it and rendered a print PDF instead: 4 pages with both figures and
+the audit table, committed in `bdf41ee` (`docs/writeup.pdf`, 351,136 bytes).
+No number changed in the cut. Rewriting it in my own words is still to do;
+the PDF will be re-rendered from the edited Markdown.
+
+### Endpoint (Step 3)
+
+Added `src/18_serve.py` (9,456 bytes) and `rebuild.py` (1,841 bytes), both
+written by Claude and tested on a stand-in with my schema before I ran them.
+The endpoint reads `q_hat` from the locked Day 3 result rather than
+recomputing it, and refuses to start unless the model was fitted on 19,804
+rows with the same score Day 3 measured.
+
+Two examples from the command line; the model knew every station and code:
+
+| Input | Upper bound | Model q90 | Model median |
+|---|---|---|---|
+| YU, UNION STATION, SUDP, Wed 2026-03-04 08:15 | 9.69 min | 9.609 | 4.3 |
+| BD, KENNEDY BD STATION, MUPR1, Sat 2026-03-07 02:30 | 112.24 min | 112.156 | 32.64 |
+
+Same `q_hat` (0.0835) in both, bounds about 12 times apart: the width comes
+from the model's 90th percentile, and conformal adds the same small
+correction to every delay. The second example sits in the two groups with
+the lowest test coverage among lines and hour bands (BD 90.7%, overnight
+89.9%), which the endpoint now reports next to the answer.
+
+Server mode: `curl.exe` returned the same JSON as the command line, and the
+server logged `200` for each request.
+
 ### AI assistance
 
 Claude (Anthropic) was used throughout.
