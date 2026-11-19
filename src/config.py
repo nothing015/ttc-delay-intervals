@@ -40,7 +40,7 @@ PACKAGE_ID = "ttc-subway-delay-data"
 # span of different regimes makes the model worse, not better. 2023 onward is
 # a recent, reasonably stable period.
 START_DATE = "2023-01-01"
-END_DATE = None  # None means "everything available"
+END_DATE = "2026-09-30 23:59:59"  # Pinned on Day 5: the last delay every result was measured on. None would pull in months published later and change every count.
 
 # Minimum delay in minutes for a row to count as an actual delay. Most logged
 # incidents caused no measurable delay; those are not what we are predicting.

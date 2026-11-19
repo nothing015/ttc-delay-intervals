@@ -67,7 +67,8 @@ and overnight (89.9%), were also the lowest on calibration.
 
 ## Rebuild it
 
-Two commands after creating an environment: install, then rebuild.
+Two commands after creating an environment: install, then rebuild. Tested
+with Python 3.14.3; `requirements.txt` pins the exact library versions used.
 
 macOS / Linux:
 
